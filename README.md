@@ -16,10 +16,9 @@ server.js: Entry point for the backend server.
 
 API Endpoints
 User APIs
-
 User
-
 Register
+
 Fields:
 Full Name
 Email
@@ -33,8 +32,8 @@ POST /user/register – Register a new user.
 
 
 
-
 Login
+
 Fields:
 Email
 Password
@@ -45,31 +44,37 @@ POST /user/login – Login a user.
 
 
 
-
 User Profile
+
 API:
 GET /user/profile – Get user details.
 
 
 
-
-
-
 Order
 
+APIs:
 GET /order/bookings – Get all bookings.
 POST /order/bookings – Add a new booking.
-Fields: Choose date (String[]), Photographer (optional), Caterers (optional), Rooms (optional).
+Fields:
+Choose Date (String[])
+Photographer (optional)
+Caterers (optional)
+Rooms (optional)
+
+
 
 
 PUT /order/bookings/:id – Update a booking.
 DELETE /order/bookings/:id – Delete a booking.
 GET /order/bookings/:id – Get booking details (optional).
-Razorpay integration for payments.
 
+
+Razorpay Integration: For payments.
 
 Mandaps
 
+APIs:
 GET /mandaps – Get all mandap details.
 GET /mandaps/search – Search mandaps by city, mandap name, venue types, or available dates.
 GET /mandaps/filter – Filter mandaps by price or guest capacity.
@@ -77,7 +82,11 @@ GET /mandaps/:id – Get details of a specific mandap.
 GET /mandaps/featured – Get featured mandaps (optional).
 GET /mandaps/availability/:id – Check availability of a mandap.
 POST /mandaps/favourites – Add mandap to favourites (requires mandapId).
-Reviews:
+
+
+
+Reviews
+
 Fields:
 User Id
 Provider Id
@@ -93,27 +102,27 @@ DELETE /mandaps/reviews/:id – Delete a review.
 
 
 
+Cloudinary Integration
 
+For image uploads and management.
 
+Socket.IO Implementation
 
-Cloudinary Integration: For image uploads and management.
-
-Socket.io Implementation: For real-time features (e.g., booking updates, notifications).
-
+For real-time features (e.g., booking updates, notifications).
 
 Tech Stack
 
 Server: Node.js, Express.js
 Database: MongoDB
 File Storage: Cloudinary
-Real-Time: Socket.io
+Real-Time: Socket.IO
 Payment: Razorpay
 
 Installation Guide
 To run the bookMyMandap backend on your local system, follow these steps:
 Step 1: Clone the Repository
 Clone the project to your local system:
-git clone [https://github.com/D1-Cdac-project/USER_PROVIDER_SERVER.git](https://github.com/D1-Cdac-project/USER_PROVIDER_SERVER.git)
+git clone https://github.com/D1-Cdac-project/USER_PROVIDER_SERVER.git
 cd bookMyMandap/server
 
 Step 2: Install Dependencies
