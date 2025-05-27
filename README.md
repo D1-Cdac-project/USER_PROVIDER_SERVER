@@ -14,102 +14,6 @@ package-lock.json: Lock file for dependency versions.
 package.json: Project metadata and dependencies.
 server.js: Entry point for the backend server.
 
-API Endpoints
-User APIs
-User
-Register
-
-Fields:
-Full Name
-Email
-Phone Number
-Password
-Address
-
-
-API:
-POST /user/register – Register a new user.
-
-
-
-Login
-
-Fields:
-Email
-Password
-
-
-API:
-POST /user/login – Login a user.
-
-
-
-User Profile
-
-API:
-GET /user/profile – Get user details.
-
-
-
-Order
-
-APIs:
-GET /order/bookings – Get all bookings.
-POST /order/bookings – Add a new booking.
-Fields:
-Choose Date (String[])
-Photographer (optional)
-Caterers (optional)
-Rooms (optional)
-
-
-
-
-PUT /order/bookings/:id – Update a booking.
-DELETE /order/bookings/:id – Delete a booking.
-GET /order/bookings/:id – Get booking details (optional).
-
-
-Razorpay Integration: For payments.
-
-Mandaps
-
-APIs:
-GET /mandaps – Get all mandap details.
-GET /mandaps/search – Search mandaps by city, mandap name, venue types, or available dates.
-GET /mandaps/filter – Filter mandaps by price or guest capacity.
-GET /mandaps/:id – Get details of a specific mandap.
-GET /mandaps/featured – Get featured mandaps (optional).
-GET /mandaps/availability/:id – Check availability of a mandap.
-POST /mandaps/favourites – Add mandap to favourites (requires mandapId).
-
-
-
-Reviews
-
-Fields:
-User Id
-Provider Id
-Mandap Id
-Rating
-Message
-
-
-APIs:
-POST /mandaps/reviews – Add a review.
-PUT /mandaps/reviews/:id – Update a review.
-DELETE /mandaps/reviews/:id – Delete a review.
-
-
-
-Cloudinary Integration
-
-For image uploads and management.
-
-Socket.IO Implementation
-
-For real-time features (e.g., booking updates, notifications).
-
 Tech Stack
 
 Server: Node.js, Express.js
@@ -123,11 +27,11 @@ To run the bookMyMandap backend on your local system, follow these steps:
 Step 1: Clone the Repository
 Clone the project to your local system:
 git clone https://github.com/D1-Cdac-project/USER_PROVIDER_SERVER.git
-cd bookMyMandap/server
+cd USER_PROVIDER_SERVER
 
 Step 2: Install Dependencies
 Install the required dependencies for the backend:
-cd server
+cd USER_PROVIDER_SERVER
 npm i
 
 Step 3: Add Environment Variables
