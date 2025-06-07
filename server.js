@@ -3,7 +3,8 @@ const env = require("dotenv");
 const express = require("express");
 const mongoose = require("mongoose");
 
-const userRouter = require("./routes/user");
+const userRouter = require("./routes/userRoutes");
+const providerRouter = require("./routes/providerRoutes")
 const app = express();
 env.config();
 mongoose.set("strictQuery", true);
@@ -20,6 +21,7 @@ app.use(
   })
 );
 app.use("/user", userRouter);
+app.use("/provider", providerRouter)
 
 // MongoDB connections
 mongoose.connect(process.env.MONGODB_CONNECTION).then(() => {

@@ -28,10 +28,10 @@ const providerSchema = new mongoose.Schema({
   },
   rating: {
     type: Number,
-    default: "0",
+    default: 0,
   },
   isAuthorized: {
-    type: boolean,
+    type: Boolean,
     default: false,
   },
   providerLogo: {
@@ -48,9 +48,7 @@ providerSchema.pre("save", async function (next) {
 });
 
 providerSchema.methods.generateJwtToken = function () {
-  return jwt.sign({ id: this._id }, process.env.SECRET_KEY, {
-    expiresIn: "5d",
-  });
+  return jwt.sign({ id: this._id }, process.env.SECRET_KEY, {expiresIn: "5d",});
 };
 
 module.exports = mongoose.model("providers", providerSchema);
