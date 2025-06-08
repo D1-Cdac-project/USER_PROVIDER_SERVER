@@ -3,8 +3,8 @@ const env = require("dotenv");
 const express = require("express");
 const mongoose = require("mongoose");
 
-const userRouter = require("./routes/user");
-const providerRouter = require("./routes/provider");
+// routes imports
+const userRouter = require("./routes/userRoutes");
 
 const app = express();
 env.config();
@@ -22,7 +22,6 @@ app.use(
   })
 );
 app.use("/api/user", userRouter);
-app.use("/api/provider", providerRouter);
 
 // MongoDB connections
 mongoose.connect(process.env.MONGODB_CONNECTION).then(() => {
