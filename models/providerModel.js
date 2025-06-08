@@ -28,10 +28,10 @@ const providerSchema = new mongoose.Schema({
   },
   rating: {
     type: Number,
-    default: "0",
+    default: 0,
   },
   isAuthorized: {
-    type: boolean,
+    type: Boolean,
     default: false,
   },
   providerLogo: {
