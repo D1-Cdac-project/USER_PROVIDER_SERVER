@@ -65,3 +65,32 @@ exports.getUserDetails = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 };
+
+exports.updateProfile = async (req , res) => {}
+
+//booking related
+exports.getAllBookings = async (req, res) => {}
+exports.addBooking = async (req, res) => {}
+exports.updateBooking = async (req, res) => {}
+exports.deleteBooking = async (req, res) => {}
+exports.getBookingById = async (req , res) => {}
+
+//mandap related
+exports.getAllFavoriteMandaps = async (req, res) => {}
+exports.addFavoriteMandap = async (req, res) => {}
+exports.deleteFavoriteMandap = async (req, res) => {}
+
+//caterer related
+exports.getCatererById = async (req, res) => {}
+
+//photographer related
+exports.getPhotographerById = async (req, res) => {}
+
+//room related
+exports.getRoomById = async (req, res) => {}
+
+//review related
+exports.addReview = async (req, res) => {}
+exports.updateReviewById = async (req, res) => {}
+exports.deleteReviewById = async (req, res) => {}
+
