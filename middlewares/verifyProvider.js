@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const providerModal = require("../models/provider");
+const providerModal = require("../models/providerModel");
 exports.isProvider = async (req, res, next) => {
   try {
     const { providerToken } = req.cookies;

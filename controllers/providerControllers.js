@@ -1,3 +1,7 @@
+const generateToken = require("../config/generateToken");
+const bcrypt = require("bcrypt");
+const providerModel = require("../models/providerModel");
+
 //related to provider  -- akshay
 exports.registerProvider = async (req, res) => {
     try{
@@ -19,7 +23,23 @@ exports.registerProvider = async (req, res) => {
          res.status(500).json({message : error.message})
     }
 };
-exports.loginProvider = async (req, res) => {};
+exports.loginProvider = async (req, res) => {
+    try{
+      const {email, password} = req.body
+      const providerExists = await providerModel.findOne({email});
+      if(!providerExists){
+        return res.status(404).json({message : "Invalid email or password !"});
+      }
+      const passwordMatch = await bcrypt.compare(password, providerExists.password);
+      if(!passwordMatch){
+        return res.status(404).json({ message : "invalid email or password"});
+      }
+        generateToken(res, 200, providerExists, false);
+    }
+    catch(error){
+        return res.status(500).json({ message : error.message});
+    }
+};
 exports.getProvider = async (req, res) => {};
 exports.updateProvider = async (req, res) => {};
 

@@ -1,6 +1,6 @@
 const express = require('express')
 
-const {registerProvider, loginProvider, getProviderDetails} = require('../controllers/providerController')
+const {registerProvider, loginProvider, getProviderDetails} = require('../controllers/providerControllers')
 
 const router = express.Router()
 
