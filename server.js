@@ -4,6 +4,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 
 const userRouter = require("./routes/user");
+const providerRouter = require("./routes/providerRoutes");
 const app = express();
 env.config();
 mongoose.set("strictQuery", true);
@@ -20,6 +21,7 @@ app.use(
   })
 );
 app.use("/user", userRouter);
+app.use("/api/provider", providerRouter);
 
 // MongoDB connections
 mongoose.connect(process.env.MONGODB_CONNECTION).then(() => {
