@@ -4,7 +4,7 @@ const {
   registerUser,
   loginUser,
   getUserDetails,
-  logoutUser, // Add logoutUser
+  logoutUser,
 } = require("../controllers/userControllers");
 const { isUser } = require("../middlewares/verifyUser");
 const router = express.Router();
