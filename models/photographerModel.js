@@ -1,0 +1,30 @@
+const mongoose = require('mongoose')
+
+const photographerSchema = new mongoose.Schema({
+    mandapId: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'mandaps',
+        required: true
+    }],
+    photographerName: {
+        type: String,
+        required: true
+    },
+    photographyTypes:[{
+        type: String,
+        enum: ['Candid', 'Traditional', 'Pre-wedding', 'Post-wedding', 'Drone Photography'],
+        required: true,
+        pricePerEvent: {
+            type: Number,
+            required: true
+        },
+        sampleWork:[{
+            type: String,
+            required: true
+        }]   
+    }]
+},
+{timestamps: true}
+)
+
+module.exports = mongoose.model('photographers', photographerSchema)

@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema({
     required: true,
     min: 6,
   },
+  address: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "address",
+  },
   createdAt: {
     type: Date,
     default: Date.now,
