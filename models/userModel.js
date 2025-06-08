@@ -29,13 +29,14 @@ const userSchema = new mongoose.Schema({
   },
   address: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "address",
+    ref: "Address",
   },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 });
+
 userSchema.pre("save", async function (next) {
   const user = this;
   if (!user.isModified("password")) {
@@ -51,4 +52,4 @@ userSchema.methods.generateJwtToken = function () {
   });
 };
 
-module.exports = mongoose.model("users", userSchema);
+module.exports = mongoose.model("Users", userSchema);
