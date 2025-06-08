@@ -55,7 +55,19 @@ exports.logoutProvider = (req, res) => {
     }
 };
 
-exports.getProvider = async (req, res) => {};
+exports.getProvider = async (req, res) => {
+    try{
+        if(!req.provider) 
+            return res.status(400).json({ message : "Invalid request"});
+        const provider = await providerModel.findOne({ _id : req.provider._id});
+        if(!provider)
+            return res.status(404).json({ message : "User not found"});
+        return res.status(200).json({ provider });
+    }
+    catch(error){
+        return res.status(500).json({ error : error.message});
+    }
+};
 exports.updateProvider = async (req, res) => {};
 
 //related to booking
