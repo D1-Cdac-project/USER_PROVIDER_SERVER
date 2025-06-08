@@ -1,25 +1,6 @@
 const mongoose = require("mongoose");
 
 const addressSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    min: 3,
-    max: 50,
-  },
-  mobileNumber: {
-    type: Number,
-    min: 10,
-    required: true,
-    trim: true,
-  },
-  pinCode: {
-    type: Number,
-    required: true,
-    trim: true,
-    min: 6,
-  },
   state: {
     type: String,
     required: true,
@@ -54,5 +35,22 @@ const addressSchema = new mongoose.Schema({
       "Uttarakhand",
       "West Bengal",
     ],
+    city: {
+      type: String,
+      required: true,
+    },
+    pinCode: {
+      type: Number,
+      required: true,
+      trim: true,
+      min: 6,
+    },
+    fullAddress: {
+      type: String,
+      required: true,
+      trim: true,
+    },
   },
 });
+
+module.exports = mongoose.model("address", addressSchema);
