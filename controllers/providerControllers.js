@@ -1,3 +1,5 @@
+const mandapModel = require('../models/mandapModel');
+
 //related to provider
 exports.registerProvider = async (req, res) => {}
 exports.loginProvider = async (req, res) => {}
@@ -8,7 +10,51 @@ exports.updateProvider = async (req, res) => {}
 exports.getAllBookings = async (req, res) => {}
 
 //Related to mandap
-exports.createMandap = async (req, res) => {}
+exports.createMandap = async (req, res) => {
+    if(!req.provider) {
+        return res.status(400).json({ message: "Invalid Request" });
+    }
+    try{
+        const {mandapName,
+            availableDates,
+            venueType,
+            address,
+            penaltyChargesPerHour,
+            cancellationPolicy,
+            venueImages,
+            guestCapacity,
+            venuePricing,
+            securityDeposit,
+            securityDepositType,
+            amenities,
+            outdoorFacilities,
+            paymentOptions,
+            isExternalCateringAllowed} = req.body;
+
+
+        const mandap = await mandapModel.create({
+            mandapName,
+            providerId: req.provider._id,
+            availableDates,
+            venueType,
+            address,
+            penaltyChargesPerHour,
+            cancellationPolicy,
+            venueImages,
+            guestCapacity,
+            venuePricing,
+            securityDeposit,
+            securityDepositType,
+            amenities,
+            outdoorFacilities,
+            paymentOptions,
+            isExternalCateringAllowed
+        });
+    }
+    catch(error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
 getAllMandapByProviderID = async (req, res) => {}
 exports.updateMandap = async (req, res) => {}
 exports.deleteMandap = async (req, res) => {}
