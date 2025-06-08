@@ -46,14 +46,6 @@ exports.registerUser = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-        phoneNumber: user.phoneNumber,
-        address: address,
-        createdAt: user.createdAt,
-      },
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -131,12 +123,10 @@ exports.getUserDetails = async (req, res) => {
       success: true,
       message: "User details retrieved successfully",
       user: {
-        _id: populatedUser._id,
         fullName: populatedUser.fullName,
         email: populatedUser.email,
         phoneNumber: populatedUser.phoneNumber,
         address: populatedUser.address,
-        createdAt: populatedUser.createdAt,
       },
     });
   } catch (error) {
@@ -219,14 +209,6 @@ exports.updateProfile = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Profile updated successfully",
-      user: {
-        _id: updatedUser._id,
-        fullName: updatedUser.fullName,
-        email: updatedUser.email,
-        phoneNumber: updatedUser.phoneNumber,
-        address: updatedUser.address,
-        createdAt: updatedUser.createdAt,
-      },
     });
   } catch (error) {
     if (error.name === "ValidationError") {
