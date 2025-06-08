@@ -23,6 +23,7 @@ exports.registerProvider = async (req, res) => {
          res.status(500).json({message : error.message})
     }
 };
+
 exports.loginProvider = async (req, res) => {
     try{
       const {email, password} = req.body
@@ -40,6 +41,20 @@ exports.loginProvider = async (req, res) => {
         return res.status(500).json({ message : error.message});
     }
 };
+
+exports.logoutProvider = (req, res) => {
+    try{
+        res.cookie("providerToken", null, {
+            expires : new Date(Date.now()), 
+            httpOnly : true
+        });
+        return res.status(200).json({ message : "Logout successful"});
+    }
+    catch(error){
+        return res.status(500).json({ error : error.message});
+    }
+};
+
 exports.getProvider = async (req, res) => {};
 exports.updateProvider = async (req, res) => {};
 
