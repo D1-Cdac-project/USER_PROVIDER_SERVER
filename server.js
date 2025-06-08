@@ -3,7 +3,7 @@ const env = require("dotenv");
 const express = require("express");
 const mongoose = require("mongoose");
 
-const userRouter = require("./routes/user");
+const userRouter = require("./routes/userRoutes");
 const providerRouter = require("./routes/providerRoutes");
 const app = express();
 env.config();
@@ -20,7 +20,7 @@ app.use(
     credentials: true,
   })
 );
-app.use("/user", userRouter);
+app.use("/api/user", userRouter);
 app.use("/api/provider", providerRouter);
 
 // MongoDB connections
