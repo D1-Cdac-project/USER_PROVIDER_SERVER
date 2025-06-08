@@ -1,6 +1,6 @@
-const userModel = require("../models/user");
 const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
+const userModel = require("../models/userModel");
 
 exports.registerUser = async (req, res) => {
   try {
@@ -66,31 +66,81 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
-exports.updateProfile = async (req , res) => {}
+exports.updateProfile = async (req, res) => {
+  try {
+    // Prepare update object
+    const { fullName, email, phoneNumber, password, address } = req.body;
+    const update = {};
+    if (fullName) update.fullName = fullName;
+    if (email) update.email = email;
+    if (phoneNumber) update.phoneNumber = phoneNumber;
+    if (address) {
+      if (!mongoose.isValidObjectId(address)) {
+        return res.status(400).json({ message: "Invalid address ID" });
+      }
+      update.address = address;
+    }
+    if (password) {
+      update.password = await bcrypt.hash(password, 10); // Manually hash password
+    }
 
-//booking related
-exports.getAllBookings = async (req, res) => {}
-exports.addBooking = async (req, res) => {}
-exports.updateBooking = async (req, res) => {}
-exports.deleteBooking = async (req, res) => {}
-exports.getBookingById = async (req , res) => {}
+    // Update user
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: update },
+      { new: true, runValidators: true }
+    ).select("-password"); // Exclude password from response
 
-//mandap related
-exports.getAllFavoriteMandaps = async (req, res) => {}
-exports.addFavoriteMandap = async (req, res) => {}
-exports.deleteFavoriteMandap = async (req, res) => {}
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-//caterer related
-exports.getCatererById = async (req, res) => {}
+    // Generate new JWT
+    const newToken = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
+      expiresIn: "5d",
+    });
 
-//photographer related
-exports.getPhotographerById = async (req, res) => {}
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user,
+      token: newToken,
+    });
+  } catch (error) {
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid token" });
+    }
+    if (error.name === "ValidationError") {
+      return res.status(400).json({ message: error.message });
+    }
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Email already in use" });
+    }
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
-//room related
-exports.getRoomById = async (req, res) => {}
+//booking related --akshay
+exports.getAllBookings = async (req, res) => {};
+exports.addBooking = async (req, res) => {};
+exports.updateBooking = async (req, res) => {};
+exports.deleteBooking = async (req, res) => {};
+exports.getBookingById = async (req, res) => {};
 
-//review related
-exports.addReview = async (req, res) => {}
-exports.updateReviewById = async (req, res) => {}
-exports.deleteReviewById = async (req, res) => {}
+//mandap related  --vaishnavi
+exports.getAllFavoriteMandaps = async (req, res) => {};
+exports.addFavoriteMandap = async (req, res) => {};
+exports.deleteFavoriteMandap = async (req, res) => {};
 
+//caterer related  --tanay
+exports.getCatererById = async (req, res) => {};
+
+//photographer related  --tanay
+exports.getPhotographerById = async (req, res) => {};
+
+//room related  --vaishnavi
+exports.getRoomById = async (req, res) => {};
+
+//review related  --vaishnavi
+exports.addReview = async (req, res) => {};
+exports.updateReviewById = async (req, res) => {};
+exports.deleteReviewById = async (req, res) => {};
