@@ -1,25 +1,59 @@
+const mongoose = require("mongoose");
 const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
 const userModel = require("../models/userModel");
+const addressModel = require("../models/addressModel");
 
 exports.registerUser = async (req, res) => {
   try {
-    const { fullName, email, phoneNumber, password } = req.body;
+    const {
+      fullName,
+      email,
+      phoneNumber,
+      password,
+      state,
+      city,
+      pinCode,
+      fullAddress,
+    } = req.body;
+
+    // Check for existing user
     const userExist = await userModel.findOne({ email });
     if (userExist) {
-      return res.status(400).json({ message: "User already exists" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
 
+    // Create address document
+    const address = await addressModel.create({
+      state,
+      city,
+      pinCode,
+      fullAddress,
+    });
+
+    // Create user with address reference
     const user = await userModel.create({
       fullName,
       email,
       phoneNumber,
       password,
+      address: address._id,
     });
 
-    generateToken(res, 201, user, true);
+    // Return response without generating a token
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    if (error.code === 11000) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already in use" });
+    }
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
@@ -28,94 +62,170 @@ exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
     const userExist = await userModel.findOne({ email });
     if (!userExist) {
-      return res.status(404).json({ message: "Invalid Email or Password" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Invalid Email or Password" });
     }
 
     const passwordMatch = await bcrypt.compare(password, userExist.password);
     if (!passwordMatch) {
-      return res.status(400).json({ message: "Invalid Email or Password" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Email or Password" });
     }
 
-    generateToken(res, 200, userExist, true);
+    // Generate token
+    const token = generateToken(res, 200, userExist, true);
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      fullName: userExist.fullName,
+      token,
+    });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.logoutUser = async (req, res) => {
   try {
-    res.cookie("userToken", null, {
-      expires: new Date(Date.now()),
-      httpOnly: true,
-    });
-    return res.status(200).json({ message: "Logout successful" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Logout successful" });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
 exports.getUserDetails = async (req, res) => {
   try {
-    if (!req.user) return res.status(400).json({ message: "Invalid Request" });
-    const user = await userModel.findOne({ _id: req.user._id });
+    const user = req.user;
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
 
-    if (!user) return res.status(404).json({ message: "No user found" });
-    return res.status(200).json({ user });
+    // Populate the address field
+    const populatedUser = await userModel
+      .findById(user._id)
+      .populate("address")
+      .select("-password");
+
+    if (!populatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "User details retrieved successfully",
+      user: {
+        fullName: populatedUser.fullName,
+        email: populatedUser.email,
+        phoneNumber: populatedUser.phoneNumber,
+        address: populatedUser.address,
+      },
+    });
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    if (error.name === "CastError") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid user ID" });
+    }
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 
 exports.updateProfile = async (req, res) => {
   try {
-    // Prepare update object
-    const { fullName, email, phoneNumber, password, address } = req.body;
-    const update = {};
-    if (fullName) update.fullName = fullName;
-    if (email) update.email = email;
-    if (phoneNumber) update.phoneNumber = phoneNumber;
-    if (address) {
-      if (!mongoose.isValidObjectId(address)) {
-        return res.status(400).json({ message: "Invalid address ID" });
-      }
-      update.address = address;
-    }
-    if (password) {
-      update.password = await bcrypt.hash(password, 10); // Manually hash password
-    }
-
-    // Update user
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: update },
-      { new: true, runValidators: true }
-    ).select("-password"); // Exclude password from response
-
+    const user = req.user;
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    // Generate new JWT
-    const newToken = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
-      expiresIn: "5d",
-    });
+    const { fullName, email, phoneNumber, password, address } = req.body;
 
-    res.status(200).json({
+    // Update user fields
+    if (fullName) user.fullName = fullName;
+    if (email) user.email = email;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (password) user.password = password;
+
+    // Update or create address if provided
+    if (address) {
+      let addressDoc;
+      if (user.address) {
+        addressDoc = await addressModel.findById(user.address);
+        if (!addressDoc) {
+          console.log(
+            `Address not found for ID: ${user.address}, creating a new address.`
+          );
+          // Address not found, create a new one
+          addressDoc = await addressModel.create({
+            state: address.state || "",
+            city: address.city || "",
+            pinCode: address.pinCode || "",
+            fullAddress: address.fullAddress || "",
+          });
+          user.address = addressDoc._id; // Update the user's address reference
+        }
+      } else {
+        console.log(
+          "No address reference found for user, creating a new address."
+        );
+        // No address reference, create a new one
+        addressDoc = await addressModel.create({
+          state: address.state || "",
+          city: address.city || "",
+          pinCode: address.pinCode || "",
+          fullAddress: address.fullAddress || "",
+        });
+        user.address = addressDoc._id; // Set the user's address reference
+      }
+
+      // Update address fields if provided
+      if (address.state) addressDoc.state = address.state;
+      if (address.city) addressDoc.city = address.city;
+      if (address.pinCode) addressDoc.pinCode = address.pinCode;
+      if (address.fullAddress) addressDoc.fullAddress = address.fullAddress;
+      await addressDoc.save();
+    }
+
+    await user.save();
+
+    // Fetch updated user with populated address
+    const updatedUser = await userModel
+      .findById(user._id)
+      .populate("address")
+      .select("-password");
+
+    return res.status(200).json({
+      success: true,
       message: "Profile updated successfully",
-      user,
-      token: newToken,
     });
   } catch (error) {
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token" });
-    }
     if (error.name === "ValidationError") {
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        error: error.message,
+      });
     }
     if (error.code === 11000) {
-      return res.status(400).json({ message: "Email already in use" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already in use" });
     }
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
   }
 };
 

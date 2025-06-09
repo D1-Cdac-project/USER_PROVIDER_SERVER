@@ -35,22 +35,23 @@ const addressSchema = new mongoose.Schema({
       "Uttarakhand",
       "West Bengal",
     ],
-    city: {
-      type: String,
-      required: true,
-    },
-    pinCode: {
-      type: Number,
-      required: true,
-      trim: true,
-      min: 6,
-    },
-    fullAddress: {
-      type: String,
-      required: true,
-      trim: true,
-    },
+  },
+  city: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  pinCode: {
+    type: String,
+    required: true,
+    trim: true,
+    match: [/^\d{6}$/, "Please enter a valid 6-digit pin code"],
+  },
+  fullAddress: {
+    type: String,
+    required: true,
+    trim: true,
   },
 });
 
-module.exports = mongoose.model("address", addressSchema);
+module.exports = mongoose.model("Address", addressSchema);
