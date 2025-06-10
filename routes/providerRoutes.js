@@ -1,11 +1,9 @@
-const express = require("express");
-const router = express.Router();
+const express = require('express')
 
 const {isProvider} = require('../middlewares/verifyProvider')
 const {registerProvider, loginProvider, logoutProvider, getProvider, updateProvider} = require('../controllers/providerControllers')
 
-const { createMandap } = require("../controllers/providerControllers");
-
+const router = express.Router()
 
 router.post('/register', registerProvider)
 router.post('/login', loginProvider)
