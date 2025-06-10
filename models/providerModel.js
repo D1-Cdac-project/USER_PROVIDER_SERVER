@@ -18,17 +18,13 @@ const providerSchema = new mongoose.Schema({
     trim: true,
   },
   address: {
-    type: String,
-    required: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Address",
   },
   phoneNumber: {
     type: Number,
     required: true,
     min: 10,
-  },
-  rating: {
-    type: Number,
-    default: 0,
   },
   isAuthorized: {
     type: Boolean,
@@ -53,4 +49,4 @@ providerSchema.methods.generateJwtToken = function () {
   });
 };
 
-module.exports = mongoose.model("providers", providerSchema);
+module.exports = mongoose.model("Providers", providerSchema);
