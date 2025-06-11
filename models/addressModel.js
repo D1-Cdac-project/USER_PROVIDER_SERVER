@@ -3,7 +3,6 @@ const mongoose = require("mongoose");
 const addressSchema = new mongoose.Schema({
   state: {
     type: String,
-    required: true,
     trim: true,
     enum: [
       "Andhra Pradesh",
@@ -38,18 +37,15 @@ const addressSchema = new mongoose.Schema({
   },
   city: {
     type: String,
-    required: true,
     trim: true,
   },
   pinCode: {
     type: String,
-    required: true,
     trim: true,
     match: [/^\d{6}$/, "Please enter a valid 6-digit pin code"],
   },
   fullAddress: {
     type: String,
-    required: true,
     trim: true,
   },
 });

@@ -18,12 +18,13 @@ const providerSchema = new mongoose.Schema({
     trim: true,
   },
   address: {
-    type: String,
-    required: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Address",
   },
   phoneNumber: {
     type: Number,
     required: true,
+    match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"],
     min: 10,
   },
   rating: {

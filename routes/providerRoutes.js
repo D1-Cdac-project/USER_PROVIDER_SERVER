@@ -11,6 +11,4 @@ router.post('/logout', logoutProvider)
 router.get('/me',isProvider, getProvider)
 router.put('/update', isProvider, updateProvider)
 
-router.post("/mandap", createMandap);
-
 module.exports = router
