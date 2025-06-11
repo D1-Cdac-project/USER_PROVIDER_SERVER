@@ -7,25 +7,17 @@ const addressModel = require("../models/addressModel")
 //related to provider  -- akshay
 exports.registerProvider = async (req, res) => {
     try{
-        const {name, email, password, phoneNumber, state, city, pinCode, fullAddress} = req.body
+        const {name, email, password, phoneNumber} = req.body
         const providerExists = await providerModel.findOne({email});
         if(providerExists){
             return res.status(400).json({ message : "provider already exists!"})
         }
-
-        const address = await addressModel.create({
-            state,
-            city,
-            pinCode,
-            fullAddress,
-        });
 
         const provider = await providerModel.create({
             name,
             email,
             password,
             phoneNumber,
-            address: address._id
         });
         generateToken(res, 201, provider, false);
     }
