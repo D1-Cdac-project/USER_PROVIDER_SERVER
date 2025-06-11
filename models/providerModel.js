@@ -24,6 +24,7 @@ const providerSchema = new mongoose.Schema({
   phoneNumber: {
     type: Number,
     required: true,
+    match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"],
     min: 10,
   },
   isAuthorized: {

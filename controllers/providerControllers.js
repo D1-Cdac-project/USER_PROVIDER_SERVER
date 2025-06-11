@@ -1,26 +1,23 @@
-
-const mandapModel = require('../models/mandapModel');
-
-
 const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
 const jwt = require('jsonwebtoken')
 const providerModel = require("../models/providerModel");
+const addressModel = require("../models/addressModel")
 
 //related to provider  -- akshay
 exports.registerProvider = async (req, res) => {
     try{
-        const {name, email, password, address, phoneNumber} = req.body
+        const {name, email, password, phoneNumber} = req.body
         const providerExists = await providerModel.findOne({email});
         if(providerExists){
             return res.status(400).json({ message : "provider already exists!"})
         }
+
         const provider = await providerModel.create({
             name,
             email,
             password,
-            address,
-            phoneNumber
+            phoneNumber,
         });
         generateToken(res, 201, provider, false);
     }
@@ -62,12 +59,32 @@ exports.logoutProvider = (req, res) => {
 
 exports.getProvider = async (req, res) => {
     try{
-        if(!req.provider) 
+        const provider = req.provider;
+        if(!provider) 
             return res.status(400).json({ message : "Invalid request"});
-        const provider = await providerModel.findOne({ _id : req.provider._id});
-        if(!provider)
-            return res.status(404).json({ message : "User not found"});
-        return res.status(200).json({ provider });
+
+        const populatedProvider = await providerModel
+            .findById(provider._id)
+            .populate("address")
+            .select("-password");
+
+        if(!populatedProvider)
+            return res.status(404).json({ message : "Provider not found"});
+
+        // return res.status(200).json({ 
+        //     success: true,
+        //     message: "Provider details retrieved successfully",
+        //     provider: {
+        //         _id: populatedProvider._id,
+        //         fullName: populatedProvider.fullName,
+        //         email: populatedProvider.email,
+        //         phoneNumber: populatedProvider.phoneNumber,
+        //         address: populatedProvider.address,
+        //         createdAt: populatedProvider.createdAt,
+        //     },
+        //  });
+
+        return res.status(200).json({ populatedProvider })
     }
     catch(error){
         return res.status(500).json({ error : error.message});
@@ -76,47 +93,79 @@ exports.getProvider = async (req, res) => {
 
 exports.updateProvider = async (req, res) => {
   try {
-    const { name, email, password, address, phoneNumber } = req.body;
-    const update = {};
+    const provider = req.provider; // injected by auth middleware
+    if (!provider) {
+      return res.status(404).json({ message: "Provider not found" });
+    }
 
-    if (name) update.name = name;
-    if (email) update.email = email;
-    if (address) update.address = address;
+    const { name, email, password, phoneNumber, address } = req.body;
+
+    // Update basic provider fields
+    if (name) provider.name = name;
+    if (email) provider.email = email;
     if (phoneNumber) {
       if (!/^\d{10}$/.test(phoneNumber)) {
         return res.status(400).json({ message: "Invalid phone number" });
       }
-      update.phoneNumber = phoneNumber;
+      provider.phoneNumber = phoneNumber;
     }
     if (password) {
-      update.password = await bcrypt.hash(password, 10);
+      provider.password = await bcrypt.hash(password, 10);
     }
 
-    // req.provider injected by isProvider middleware
-    const providerId = req.provider._id;
+    // Handle address
+    if (address) {
+      let addressDoc;
 
+      // If provider has an existing address
+      if (provider.address) {
+        addressDoc = await addressModel.findById(provider.address);
+        if (!addressDoc) {
+          // Address ID is invalid, create new
+          addressDoc = await addressModel.create({
+            state: address.state || "",
+            city: address.city || "",
+            pinCode: address.pinCode || "",
+            fullAddress: address.fullAddress || "",
+          });
+          provider.address = addressDoc._id;
+        }
+      } else {
+        // No address reference, create new
+        addressDoc = await addressModel.create({
+          state: address.state || "",
+          city: address.city || "",
+          pinCode: address.pinCode || "",
+          fullAddress: address.fullAddress || "",
+        });
+        provider.address = addressDoc._id;
+      }
+
+      // Update existing fields if present
+      if (address.state) addressDoc.state = address.state;
+      if (address.city) addressDoc.city = address.city;
+      if (address.pinCode) addressDoc.pinCode = address.pinCode;
+      if (address.fullAddress) addressDoc.fullAddress = address.fullAddress;
+
+      await addressDoc.save();
+    }
+
+    await provider.save();
+
+    // Fetch updated provider with populated address
     const updatedProvider = await providerModel
-      .findByIdAndUpdate(
-        providerId,
-        { $set: update },
-        { new: true, runValidators: true }
-      )
+      .findById(provider._id)
+      .populate("address")
       .select("-password");
-
-    if (!updatedProvider) {
-      return res.status(404).json({ message: "Provider not found" });
-    }
 
     // Generate new token
     const newToken = jwt.sign(
       { id: updatedProvider._id },
       process.env.SECRET_KEY,
-      {
-        expiresIn: "5d",
-      }
+      { expiresIn: "5d" }
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       message: "Provider profile updated successfully",
       provider: updatedProvider,
       token: newToken,
@@ -128,66 +177,19 @@ exports.updateProvider = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({ message: "Email already in use" });
     }
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
 //related to booking
 exports.getAllBookings = async (req, res) => {};
 
-
-//Related to mandap
-exports.createMandap = async (req, res) => {
-    if(!req.provider) {
-        return res.status(400).json({ message: "Invalid Request" });
-    }
-    try{
-        const {mandapName,
-            availableDates,
-            venueType,
-            address,
-            penaltyChargesPerHour,
-            cancellationPolicy,
-            venueImages,
-            guestCapacity,
-            venuePricing,
-            securityDeposit,
-            securityDepositType,
-            amenities,
-            outdoorFacilities,
-            paymentOptions,
-            isExternalCateringAllowed} = req.body;
-
-
-        const mandap = await mandapModel.create({
-            mandapName,
-            providerId: req.provider._id,
-            availableDates,
-            venueType,
-            address,
-            penaltyChargesPerHour,
-            cancellationPolicy,
-            venueImages,
-            guestCapacity,
-            venuePricing,
-            securityDeposit,
-            securityDepositType,
-            amenities,
-            outdoorFacilities,
-            paymentOptions,
-            isExternalCateringAllowed
-        });
-    }
-    catch(error) {
-        return res.status(500).json({ message: error.message });
-    }
-}
-getAllMandapByProviderID = async (req, res) => {}
-exports.updateMandap = async (req, res) => {}
-exports.deleteMandap = async (req, res) => {}
-exports.searchProviderMandap = async (req, res) => {}
-
-
+//Related to mandap   --tanay
+exports.createMandap = async (req, res) => {};
+exports.getAllMandapByProviderID = async (req, res) => {};
+exports.updateMandap = async (req, res) => {};
+exports.deleteMandap = async (req, res) => {};
+exports.searchProviderMandap = async (req, res) => {};
 
 //room related   --- vaishnavi
 exports.addRoom = async (req, res) => {};

@@ -22,8 +22,8 @@ app.use(
     credentials: true,
   })
 );
-app.use("/api/user", userRouter);
-app.use("/api/provider", providerRouter);
+app.use("/user", userRouter);
+app.use("/provider", providerRouter)
 
 // MongoDB connections
 mongoose.connect(process.env.MONGODB_CONNECTION).then(() => {
