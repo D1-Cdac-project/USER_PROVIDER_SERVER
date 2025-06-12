@@ -2,8 +2,9 @@ const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const providerModel = require("../models/providerModel");
-const addressModel = require("../models/addressModel")
+const addressModel = require("../models/addressModel");
 const mandapModel = require("../models/mandapModel");
+const approvalRequestModel = require("../models/approvalRequestModel");
 
 //related to provider  -- akshay
 exports.registerProvider = async (req, res) => {
@@ -196,156 +197,167 @@ exports.getAllBookings = async (req, res) => {};
 
 //Related to mandap   --tanay
 exports.createMandap = async (req, res) => {
-    if(!req.provider) {
-        return res.status(400).json({ message: "Invalid Request" });
-    }
-    try{
-        const {mandapName,
-            availableDates,
-            venueType,
-            address,
-            penaltyChargesPerHour,
-            cancellationPolicy,
-            venueImages,
-            guestCapacity,
-            venuePricing,
-            securityDeposit,
-            securityDepositType,
-            amenities,
-            outdoorFacilities,
-            paymentOptions,
-            isExternalCateringAllowed} = req.body;
+  if (!req.provider) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+  try {
+    const {
+      mandapName,
+      availableDates,
+      venueType,
+      address,
+      penaltyChargesPerHour,
+      cancellationPolicy,
+      venueImages,
+      guestCapacity,
+      venuePricing,
+      securityDeposit,
+      securityDepositType,
+      amenities,
+      outdoorFacilities,
+      paymentOptions,
+      isExternalCateringAllowed,
+    } = req.body;
 
-
-        const mandap = await mandapModel.create({
-            mandapName,
-            providerId: req.provider._id,
-            availableDates,
-            venueType,
-            address,
-            penaltyChargesPerHour,
-            cancellationPolicy,
-            venueImages,
-            guestCapacity,
-            venuePricing,
-            securityDeposit,
-            securityDepositType,
-            amenities,
-            outdoorFacilities,
-            paymentOptions,
-            isExternalCateringAllowed
-        });
-        res.status(201).json({
-            message: "Mandap created successfully"})
-    }
-    catch(error) {
-        return res.status(500).json({ message: error.message });
-    }
-}
+    const mandap = await mandapModel.create({
+      mandapName,
+      providerId: req.provider._id,
+      availableDates,
+      venueType,
+      address,
+      penaltyChargesPerHour,
+      cancellationPolicy,
+      venueImages,
+      guestCapacity,
+      venuePricing,
+      securityDeposit,
+      securityDepositType,
+      amenities,
+      outdoorFacilities,
+      paymentOptions,
+      isExternalCateringAllowed,
+    });
+    res.status(201).json({
+      message: "Mandap created successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 // Get all mandaps by provider ID
 exports.getAllMandapByProviderID = async (req, res) => {
-    if(!req.provider){
-        return res.status(400).json({ message: "Invalid Request" });
+  if (!req.provider) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+  try {
+    const result = await mandapModel.find({
+      providerId: req.provider._id,
+      isActive: true,
+    });
+    if (result) {
+      res.status(200).json({
+        message: "Mandap fetched successfully",
+        mandap: result,
+      });
     }
-    try{
-        const result = await mandapModel.find({providerId: req.provider._id, isActive: true});
-        if(result){
-            res.status(200).json({
-                message: "Mandap fetched successfully",
-                mandap: result
-            });
-        }
-    }
-    catch(error) {
-        return res.status(500).json({ message: error.message });
-    }
-}
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 // Update a mandap by ID
 exports.updateMandap = async (req, res) => {
-    if(!req.provider){
-        return res.status(400).json({ message: "Invalid Request" });
+  if (!req.provider) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap) {
+      console.log("Mandap not found:", mandapId);
+      return res.status(404).json({ message: "Mandap not found" });
     }
-    try{
-        const {mandapId} = req.params;
-        const mandap = await mandapModel.findById(mandapId);
-if (!mandap) {
-  console.log("Mandap not found:", mandapId);
-  return res.status(404).json({ message: "Mandap not found" });
-}
-        // console.log(req.params)
-        const {
-            mandapName,
-            availableDates,
-            venueType,
-            address,
-            penaltyChargesPerHour,
-            cancellationPolicy,
-            venueImages,
-            guestCapacity,
-            venuePricing,
-            securityDeposit,
-            securityDepositType,
-            amenities,
-            outdoorFacilities,
-            paymentOptions,
-            isExternalCateringAllowed
-        } = req.body;
+    // console.log(req.params)
+    const {
+      mandapName,
+      availableDates,
+      venueType,
+      address,
+      penaltyChargesPerHour,
+      cancellationPolicy,
+      venueImages,
+      guestCapacity,
+      venuePricing,
+      securityDeposit,
+      securityDepositType,
+      amenities,
+      outdoorFacilities,
+      paymentOptions,
+      isExternalCateringAllowed,
+    } = req.body;
 
-        const updatemandap = await mandapModel.findByIdAndUpdate(mandapId, {
-            mandapName,
-            availableDates,
-            venueType,
-            address,
-            penaltyChargesPerHour,
-            cancellationPolicy,
-            venueImages,
-            guestCapacity,
-            venuePricing,
-            securityDeposit,
-            securityDepositType,
-            amenities,
-            outdoorFacilities,
-            paymentOptions,
-            isExternalCateringAllowed
-        }, { new: true });
+    const updatemandap = await mandapModel.findByIdAndUpdate(
+      mandapId,
+      {
+        mandapName,
+        availableDates,
+        venueType,
+        address,
+        penaltyChargesPerHour,
+        cancellationPolicy,
+        venueImages,
+        guestCapacity,
+        venuePricing,
+        securityDeposit,
+        securityDepositType,
+        amenities,
+        outdoorFacilities,
+        paymentOptions,
+        isExternalCateringAllowed,
+      },
+      { new: true }
+    );
 
-        // if(updatemandap) {
-            res.status(200).json({
-                message: "Mandap updated successfully",
-                updatemandap
-            });
-        // } else {
-            // res.status(404).json({ message: "Mandap not found" , mandap });
-        // }
-    }
-    catch(error) {
-        return res.status(500).json({ message: error.message });
-    }
-}
+    // if(updatemandap) {
+    res.status(200).json({
+      message: "Mandap updated successfully",
+      updatemandap,
+    });
+    // } else {
+    // res.status(404).json({ message: "Mandap not found" , mandap });
+    // }
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 exports.deleteMandap = async (req, res) => {
-    if(!req.provider){
-        return res.status(400).json({ message: "Invalid Request" });
+  if (!req.provider) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById({
+      _id: mandapId,
+      providerId: req.provider._id,
+    });
+    if (!mandap) {
+      return res.status(404).json({ message: "Mandap not found" });
     }
-    try{
-        const {mandapId} = req.params;
-        const mandap = await mandapModel.findById({_id: mandapId , providerId: req.provider._id});
-        if(!mandap) {
-            return res.status(404).json({ message: "Mandap not found" });
-        }
-        const deleteMandap = await mandapModel.updateOne({_id: mandapId}, {$set:{isActive: false}})
-        if(deleteMandap.modifiedCount > 0) {
-            res.status(200).json({
-                message: "Mandap deleted successfully",
-                mandap: mandap
-            });
-        }
+    const deleteMandap = await mandapModel.updateOne(
+      { _id: mandapId },
+      { $set: { isActive: false } }
+    );
+    if (deleteMandap.modifiedCount > 0) {
+      res.status(200).json({
+        message: "Mandap deleted successfully",
+        mandap: mandap,
+      });
     }
-    catch(error) {
-        return res.status(500).json({ message: error.message });
-    }
-}
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
 
 //room related   --- vaishnavi
 exports.addRoom = async (req, res) => {};
