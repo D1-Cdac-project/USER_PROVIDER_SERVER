@@ -31,6 +31,12 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Address",
   },
+  favoriteMandaps: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mandaps",
+    },
+  ],
   createdAt: {
     type: Date,
     default: Date.now,

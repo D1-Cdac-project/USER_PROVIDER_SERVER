@@ -1,30 +1,43 @@
-const mongoose = require('mongoose')
+const mongoose = require("mongoose");
 
-const photographerSchema = new mongoose.Schema({
-    mandapId: [{
+const photographerSchema = new mongoose.Schema(
+  {
+    mandapId: [
+      {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'mandaps',
-        required: true
-    }],
+        ref: "Mandaps",
+        required: true,
+      },
+    ],
     photographerName: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
-    photographyTypes:[{
+    photographyTypes: [
+      {
         type: String,
-        enum: ['Candid', 'Traditional', 'Pre-wedding', 'Post-wedding', 'Drone Photography'],
+        enum: [
+          "Candid",
+          "Traditional",
+          "Pre-wedding",
+          "Post-wedding",
+          "Drone Photography",
+        ],
         required: true,
         pricePerEvent: {
-            type: Number,
-            required: true
+          type: Number,
+          required: true,
         },
-        sampleWork:[{
+        sampleWork: [
+          {
             type: String,
-            required: true
-        }]   
-    }]
-},
-{timestamps: true}
-)
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('photographers', photographerSchema)
+module.exports = mongoose.model("Photographers", photographerSchema);
