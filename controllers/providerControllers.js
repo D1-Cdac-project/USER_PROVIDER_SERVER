@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const providerModel = require("../models/providerModel");
 const addressModel = require("../models/addressModel");
+const approvalRequestModel = require("../models/approvalRequestModel");
 
 //related to provider  -- akshay
 exports.registerProvider = async (req, res) => {
@@ -19,7 +20,22 @@ exports.registerProvider = async (req, res) => {
       password,
       phoneNumber,
     });
-    generateToken(res, 201, provider, false);
+
+    const approvalRequest = await approvalRequestModel.create({
+      providerId: provider._id,
+    });
+
+    io.emit("newApprovalRequest", {
+      requestId: approvalRequest._id,
+      provider: {
+        id: provider._id,
+        name: provider.name,
+        email: provider.email,
+      },
+      createdAt: approvalRequest.createdAt,
+    });
+
+    generateToken(res, 201, provider, "provider");
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -39,7 +55,10 @@ exports.loginProvider = async (req, res) => {
     if (!passwordMatch) {
       return res.status(404).json({ message: "invalid email or password" });
     }
-    generateToken(res, 200, providerExists, false);
+    if (!providerExists.isAuthorized) {
+      return res.status(403).json({ message: "You are not authorized yet!" });
+    }
+    generateToken(res, 200, providerExists, "provider");
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -69,6 +88,10 @@ exports.getProvider = async (req, res) => {
 
     if (!populatedProvider)
       return res.status(404).json({ message: "Provider not found" });
+
+    if (!providerExists.isAuthorized) {
+      return res.status(403).json({ message: "You are not authorized yet!" });
+    }
 
     return res.status(200).json({ populatedProvider });
   } catch (error) {
