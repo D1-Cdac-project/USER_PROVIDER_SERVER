@@ -19,7 +19,7 @@ exports.registerUser = async (req, res) => {
       password,
     });
 
-    generateToken(res, 201, user, true);
+    generateToken(res, 201, user, "user");
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -38,7 +38,7 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid Email or Password" });
     }
 
-    generateToken(res, 200, userExist, true);
+    generateToken(res, 200, userExist, "user");
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
