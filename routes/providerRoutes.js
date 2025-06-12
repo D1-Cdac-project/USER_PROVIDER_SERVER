@@ -12,6 +12,10 @@ router.post("/logout", logoutProvider);
 router.get("/profile", isProvider, getProvider);
 router.put("/update-profile", isProvider, updateProvider);
 
-
+// Mandap routes
+router.post('/mandap' , isProvider, createMandap)
+router.get('/getmandap', isProvider, getAllMandapByProviderID)
+router.put('/updatemandap/:mandapid', isProvider, updateMandap)
+router.delete('/deletemandap/:mandapid', isProvider, deleteMandap)
 
 module.exports = router;
