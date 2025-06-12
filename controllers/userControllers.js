@@ -19,7 +19,7 @@ exports.registerUser = async (req, res) => {
       password,
     });
 
-    generateToken(res, 201, user, true);
+    generateToken(res, 201, user, "user");
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -38,7 +38,7 @@ exports.loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid Email or Password" });
     }
 
-    generateToken(res, 200, userExist, true);
+    generateToken(res, 200, userExist, "user");
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -130,7 +130,16 @@ exports.getBookingById = async (req, res) => {};
 
 //mandap related  --vaishnavi
 exports.getAllFavoriteMandaps = async (req, res) => {};
-exports.addFavoriteMandap = async (req, res) => {};
+exports.addFavoriteMandap = async (req, res) => {
+  try {
+    return res.status(200).json({
+      success: true,
+      message: "Favorite mandap added successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 exports.deleteFavoriteMandap = async (req, res) => {};
 
 //caterer related  --tanay

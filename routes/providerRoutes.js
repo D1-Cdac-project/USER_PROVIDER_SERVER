@@ -1,4 +1,4 @@
-const express = require('express')
+const express = require("express");
 
 const {isProvider} = require('../middlewares/verifyProvider')
 const {registerProvider, loginProvider, logoutProvider, getProvider, updateProvider,
@@ -6,17 +6,12 @@ const {registerProvider, loginProvider, logoutProvider, getProvider, updateProvi
 
 const router = express.Router()
 
-// Provider routes
-router.post('/register', registerProvider)
-router.post('/login', loginProvider)
-router.post('/logout', logoutProvider)
-router.get('/me',isProvider, getProvider)
-router.put('/update', isProvider, updateProvider)
+router.post("/signup", registerProvider);
+router.post("/login", loginProvider);
+router.post("/logout", logoutProvider);
+router.get("/profile", isProvider, getProvider);
+router.put("/update-profile", isProvider, updateProvider);
 
-// Mandap routes
-router.post('/mandap' , isProvider, createMandap)
-router.get('/getmandap', isProvider, getAllMandapByProviderID)
-router.put('/updatemandap/:mandapid', isProvider, updateMandap)
-router.delete('/deletemandap/:mandapid', isProvider, deleteMandap)
 
-module.exports = router
+
+module.exports = router;

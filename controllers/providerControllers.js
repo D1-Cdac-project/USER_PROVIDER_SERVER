@@ -1,95 +1,102 @@
 const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
-const jwt = require('jsonwebtoken')
+const jwt = require("jsonwebtoken");
 const providerModel = require("../models/providerModel");
 const addressModel = require("../models/addressModel")
 const mandapModel = require("../models/mandapModel");
 
 //related to provider  -- akshay
 exports.registerProvider = async (req, res) => {
-    try{
-        const {name, email, password, phoneNumber} = req.body
-        const providerExists = await providerModel.findOne({email});
-        if(providerExists){
-            return res.status(400).json({ message : "provider already exists!"})
-        }
+  try {
+    const { name, email, password, phoneNumber } = req.body;
+    const providerExists = await providerModel.findOne({ email });
+    if (providerExists) {
+      return res.status(400).json({ message: "provider already exists!" });
+    }
 
-        const provider = await providerModel.create({
-            name,
-            email,
-            password,
-            phoneNumber,
-        });
-        generateToken(res, 201, provider, false);
-    }
-    catch(error){
-         res.status(500).json({message : error.message})
-    }
+    const provider = await providerModel.create({
+      name,
+      email,
+      password,
+      phoneNumber,
+    });
+
+    const approvalRequest = await approvalRequestModel.create({
+      providerId: provider._id,
+    });
+
+    io.emit("newApprovalRequest", {
+      requestId: approvalRequest._id,
+      provider: {
+        id: provider._id,
+        name: provider.name,
+        email: provider.email,
+      },
+      createdAt: approvalRequest.createdAt,
+    });
+
+    generateToken(res, 201, provider, "provider");
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 exports.loginProvider = async (req, res) => {
-    try{
-      const {email, password} = req.body
-      const providerExists = await providerModel.findOne({email});
-      if(!providerExists){
-        return res.status(404).json({message : "Invalid email or password !"});
-      }
-      const passwordMatch = await bcrypt.compare(password, providerExists.password);
-      if(!passwordMatch){
-        return res.status(404).json({ message : "invalid email or password"});
-      }
-        generateToken(res, 200, providerExists, false);
+  try {
+    const { email, password } = req.body;
+    const providerExists = await providerModel.findOne({ email });
+    if (!providerExists) {
+      return res.status(404).json({ message: "Invalid email or password !" });
     }
-    catch(error){
-        return res.status(500).json({ message : error.message});
+    const passwordMatch = await bcrypt.compare(
+      password,
+      providerExists.password
+    );
+    if (!passwordMatch) {
+      return res.status(404).json({ message: "invalid email or password" });
     }
+    if (!providerExists.isAuthorized) {
+      return res.status(403).json({ message: "You are not authorized yet!" });
+    }
+    generateToken(res, 200, providerExists, "provider");
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
 };
 
 exports.logoutProvider = (req, res) => {
-    try{
-        res.cookie("providerToken", null, {
-            expires : new Date(Date.now()), 
-            httpOnly : true
-        });
-        return res.status(200).json({ message : "Logout successful"});
-    }
-    catch(error){
-        return res.status(500).json({ error : error.message});
-    }
+  try {
+    res.cookie("providerToken", null, {
+      expires: new Date(Date.now()),
+      httpOnly: true,
+    });
+    return res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 exports.getProvider = async (req, res) => {
-    try{
-        const provider = req.provider;
-        if(!provider) 
-            return res.status(400).json({ message : "Invalid request"});
+  try {
+    const provider = req.provider;
+    if (!provider) return res.status(400).json({ message: "Invalid request" });
 
-        const populatedProvider = await providerModel
-            .findById(provider._id)
-            .populate("address")
-            .select("-password");
+    const populatedProvider = await providerModel
+      .findById(provider._id)
+      .populate("address")
+      .select("-password");
 
-        if(!populatedProvider)
-            return res.status(404).json({ message : "Provider not found"});
+    if (!populatedProvider)
+      return res.status(404).json({ message: "Provider not found" });
 
-        // return res.status(200).json({ 
-        //     success: true,
-        //     message: "Provider details retrieved successfully",
-        //     provider: {
-        //         _id: populatedProvider._id,
-        //         fullName: populatedProvider.fullName,
-        //         email: populatedProvider.email,
-        //         phoneNumber: populatedProvider.phoneNumber,
-        //         address: populatedProvider.address,
-        //         createdAt: populatedProvider.createdAt,
-        //     },
-        //  });
-
-        return res.status(200).json({ populatedProvider })
+    if (!providerExists.isAuthorized) {
+      return res.status(403).json({ message: "You are not authorized yet!" });
     }
-    catch(error){
-        return res.status(500).json({ error : error.message});
-    }
+
+    return res.status(200).json({ populatedProvider });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 };
 
 exports.updateProvider = async (req, res) => {
@@ -178,7 +185,9 @@ exports.updateProvider = async (req, res) => {
     if (error.code === 11000) {
       return res.status(400).json({ message: "Email already in use" });
     }
-    return res.status(500).json({ message: "Server error", error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 

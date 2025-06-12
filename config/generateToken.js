@@ -1,32 +1,24 @@
-const generateToken = (res, statusCode, user, isUser) => {
+const generateToken = (res, statusCode, entity, role) => {
   try {
-    let token = "";
-    let text = "";
-    if (isUser) {
-      token = user.generateJwtToken(); // Generating token for user
-      text = "userToken";
-    } else {
-      token = user.generateJwtToken(); // Generating token for provider
-      text = "providerToken";
-    }
+    const token = entity.generateJwtToken();
+    const cookieName = `${role}Token`;
+
     const options = {
-      expires: new Date(Date.now() + 5 * 24 * 60 * 1000),
-      secure: false,
+      expires: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
     };
-    if (text == "userToken")
-      return res
-        .status(statusCode)
-        .cookie(text, token, options)
-        .json({ success: true, user });
 
-    if (text == "providerToken")
-      return res
-        .status(statusCode)
-        .cookie(text, token, options)
-        .json({ success: true, provider : user });
+    const responseData = { success: true };
+    responseData[role] = entity;
+
+    return res
+      .status(statusCode)
+      .cookie(cookieName, token, options)
+      .json(responseData);
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
 };
+
 module.exports = generateToken;

@@ -1,13 +1,21 @@
+// Importing required modules
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const env = require("dotenv");
 const express = require("express");
 const mongoose = require("mongoose");
-const cookieParser = require("cookie-parser");
 
+// Importing routers
+const adminRouter = require("./routes/adminRoutes");
+const providerRouter = require("./routes/providerRoutes");
 const userRouter = require("./routes/userRoutes");
-const providerRouter = require("./routes/providerRoutes")
+
+// Initialize express app
 const app = express();
+
+// Load configuration
 env.config();
+
 mongoose.set("strictQuery", true);
 
 //middlewares
@@ -22,14 +30,18 @@ app.use(
     credentials: true,
   })
 );
-app.use("/user", userRouter);
-app.use("/provider", providerRouter)
+
+// Define routes
+app.use("/api/admin", adminRouter);
+app.use("/api/provider", providerRouter);
+app.use("/api/user", userRouter);
 
 // MongoDB connections
 mongoose.connect(process.env.MONGODB_CONNECTION).then(() => {
   console.log("Database connected");
 });
 
+// Server listening
 app.listen(process.env.PORT, () => {
   console.log("Server is running on port " + process.env.PORT);
 });

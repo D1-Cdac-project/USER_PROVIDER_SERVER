@@ -27,10 +27,6 @@ const providerSchema = new mongoose.Schema({
     match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"],
     min: 10,
   },
-  rating: {
-    type: Number,
-    default: 0,
-  },
   isAuthorized: {
     type: Boolean,
     default: false,
@@ -52,4 +48,4 @@ providerSchema.methods.generateJwtToken = function () {
   return jwt.sign({ id: this._id }, process.env.SECRET_KEY, {expiresIn: "5d",});
 };
 
-module.exports = mongoose.model("providers", providerSchema);
+module.exports = mongoose.model("Providers", providerSchema);
