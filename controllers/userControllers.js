@@ -132,6 +132,16 @@ exports.getBookingById = async (req, res) => {};
 exports.getAllFavoriteMandaps = async (req, res) => {};
 exports.addFavoriteMandap = async (req, res) => {
   try {
+    // if (!isUser) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: "Unauthorized access, please login first",
+    //   });
+    // }
+    const { mandapId } = req.body;
+    // const user = await userModel.findById(isUser._id);
+
+    // Check if the user is authenticated
     return res.status(200).json({
       success: true,
       message: "Favorite mandap added successfully",
