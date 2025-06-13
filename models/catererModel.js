@@ -62,6 +62,10 @@ const catererSchema = new mongoose.Schema(
     hasTastingSession: {
       type: Boolean,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );
