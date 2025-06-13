@@ -3,6 +3,21 @@ const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
 const userModel = require("../models/userModel");
 const providerModel = require("../models/providerModel");
+
+exports.registerAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const admin = await adminModel.create({
+      email,
+      password,
+    });
+    generateToken(res, 201, admin, "admin");
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
 // admin login
 exports.loginAdmin = async (req, res) => {
   try {

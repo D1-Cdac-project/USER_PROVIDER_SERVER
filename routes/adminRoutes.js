@@ -5,12 +5,15 @@ const {
   getAllUsers,
   addProvider,
   addUser,
+  registerAdmin,
 } = require("../controllers/adminControllers");
 const { isAdmin } = require("../middlewares/verifyAdmin");
 
 const router = express.Router();
 
 router.post("/login", loginAdmin);
+
+router.post("/signup", registerAdmin);
 
 router.post("/logout", logoutAdmin);
 
