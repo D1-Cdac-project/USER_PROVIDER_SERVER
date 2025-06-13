@@ -1,9 +1,10 @@
-const mongoose = require("mongoose");
-const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
-const userModel = require("../models/userModel");
-const addressModel = require("../models/addressModel");
+const mongoose = require("mongoose");
 
+const userModel = require("../models/userModel");
+const generateToken = require("../config/generateToken");
+
+// Register a new user
 exports.registerUser = async (req, res) => {
   try {
     const { fullName, email, phoneNumber, password } = req.body;
@@ -25,6 +26,7 @@ exports.registerUser = async (req, res) => {
   }
 };
 
+// Login an existing user
 exports.loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -44,6 +46,7 @@ exports.loginUser = async (req, res) => {
   }
 };
 
+// Logout the user
 exports.logoutUser = async (req, res) => {
   try {
     res.cookie("userToken", null, {
@@ -56,6 +59,7 @@ exports.logoutUser = async (req, res) => {
   }
 };
 
+//getting user details
 exports.getUserDetails = async (req, res) => {
   try {
     if (!req.user) return res.status(400).json({ message: "Invalid Request" });
@@ -132,6 +136,25 @@ exports.getBookingById = async (req, res) => {};
 exports.getAllFavoriteMandaps = async (req, res) => {};
 exports.addFavoriteMandap = async (req, res) => {
   try {
+    if (!req.user) return res.status(400).json({ message: "Invalid Request" });
+    const { mandapId } = req.body;
+    const user = await userModel.findById(req.user._id);
+
+    if (user.favoriteMandaps && user.favoriteMandaps.includes(mandapId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Mandap is already in favorites",
+      });
+    }
+
+    // Add mandapId to user's favorites array using update method
+    await userModel.findByIdAndUpdate(
+      user._id,
+      { $push: { favoriteMandaps: mandapId } },
+      { new: true, runValidators: true }
+    );
+
+    // Check if the user is authenticated
     return res.status(200).json({
       success: true,
       message: "Favorite mandap added successfully",
@@ -140,6 +163,8 @@ exports.addFavoriteMandap = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+//caterer related  --tanay
 exports.deleteFavoriteMandap = async (req, res) => {};
 
 //caterer related  --tanay

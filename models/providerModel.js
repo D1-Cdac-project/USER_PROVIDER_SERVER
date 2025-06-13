@@ -34,6 +34,10 @@ const providerSchema = new mongoose.Schema({
   providerLogo: {
     type: String,
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 providerSchema.pre("save", async function (next) {
@@ -45,7 +49,9 @@ providerSchema.pre("save", async function (next) {
 });
 
 providerSchema.methods.generateJwtToken = function () {
-  return jwt.sign({ id: this._id }, process.env.SECRET_KEY, {expiresIn: "5d",});
+  return jwt.sign({ id: this._id }, process.env.SECRET_KEY, {
+    expiresIn: "5d",
+  });
 };
 
 module.exports = mongoose.model("Providers", providerSchema);

@@ -24,16 +24,9 @@ exports.registerProvider = async (req, res) => {
 
     const approvalRequest = await approvalRequestModel.create({
       providerId: provider._id,
-    });
-
-    io.emit("newApprovalRequest", {
-      requestId: approvalRequest._id,
-      provider: {
-        id: provider._id,
-        name: provider.name,
-        email: provider.email,
-      },
-      createdAt: approvalRequest.createdAt,
+      name: provider.name,
+      email: provider.email,
+      phoneNumber: provider.phoneNumber,
     });
 
     generateToken(res, 201, provider, "provider");
@@ -81,6 +74,11 @@ exports.getProvider = async (req, res) => {
   try {
     const provider = req.provider;
     if (!provider) return res.status(400).json({ message: "Invalid request" });
+
+    const providerExists = await providerModel.findOne({ email });
+    if (!providerExists) {
+      return res.status(404).json({ message: "Invalid email or password !" });
+    }
 
     const populatedProvider = await providerModel
       .findById(provider._id)
