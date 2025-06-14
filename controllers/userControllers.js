@@ -129,7 +129,13 @@ exports.updateProfile = async (req, res) => {
 //booking related --akshay
 exports.addBooking = async (req, res) => {
   try{
-    const{mandapId, availableDates, photographer, caterer, room} = req.body;
+    const{
+      mandapId, 
+      availableDates, 
+      photographer, 
+      caterer, 
+      room
+    } = req.body;
 
     const userId = req.user.id;
 
