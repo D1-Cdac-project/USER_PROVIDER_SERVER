@@ -234,8 +234,11 @@ exports.deleteBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deleted = await bookingModel.findByIdAndDelete(id);
-
+    const deleted = await bookingModel.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true, runValidators: true }
+    );
     if (!deleted) {
       return res.status(404).json({ message: "Booking not found" });
     }
