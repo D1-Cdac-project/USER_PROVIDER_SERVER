@@ -156,7 +156,22 @@ exports.addBooking = async (req, res) => {
     res.status(500).json({ message : "Server error.", error : error.message});
   }
 };
-exports.getAllBookings = async (req, res) => {};
+
+exports.getAllBookings = async (req, res) => {
+  try {
+    const bookings = await bookingModel
+      .find()
+      .populate("mandapId")
+      .populate("userId")
+      .populate("photographer")
+      .populate("caterer");
+
+    res.status(200).json({ bookings });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 exports.updateBooking = async (req, res) => {};
 exports.deleteBooking = async (req, res) => {};
 exports.getBookingById = async (req, res) => {};
