@@ -1,16 +1,33 @@
-const generateToken = require("../config/generateToken");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const providerModel = require("../models/providerModel");
+
+// Config
+const generateToken = require("../config/generateToken");
+const { sendRegistrationEmail } = require("../config/mailer");
+
+// Models
 const addressModel = require("../models/addressModel");
-const mandapModel = require("../models/mandapModel");
+const adminModel = require("../models/adminModel");
 const approvalRequestModel = require("../models/approvalRequestModel");
+const mandapModel = require("../models/mandapModel");
+const notificationModel = require("../models/notificationModel");
+const providerModel = require("../models/providerModel");
+const userModel = require("../models/userModel");
 
 //related to provider  -- akshay
-exports.registerProvider = async (req, res) => {
+exports.registerProvider = async (req, res, io) => {
   try {
     const { name, email, password, phoneNumber } = req.body;
     const providerExists = await providerModel.findOne({ email });
+
+    // Check if email exists in userModel
+    const userExists = await userModel.findOne({ email });
+    if (userExists) {
+      return res
+        .status(400)
+        .json({ message: "Email is already registered as a user" });
+    }
+
     if (providerExists) {
       return res.status(400).json({ message: "provider already exists!" });
     }
@@ -29,13 +46,40 @@ exports.registerProvider = async (req, res) => {
       phoneNumber: provider.phoneNumber,
     });
 
+    // Send registration confirmation email
+    await sendRegistrationEmail(provider.email, provider.name, "provider");
+
+    // Emit Socket.IO event to notify admins
+    const admins = await adminModel.find({});
+    const notificationPromises = admins.map(async (admin) => {
+      return notificationModel.create({
+        recipientId: admin._id,
+        type: "provider_registration",
+        message: `New provider registered: ${provider.name} (${provider.email})`,
+        relatedId: provider._id,
+        relatedModel: "Providers",
+      });
+    });
+    await Promise.all(notificationPromises);
+
+    // Emit Socket.IO event to notify admins
+    io.emit("newProviderRegistration", {
+      requestId: approvalRequest._id,
+      provider: {
+        _id: provider._id,
+        name: provider.name,
+        email: provider.email,
+      },
+      createdAt: approvalRequest.createdAt,
+    });
+
     generateToken(res, 201, provider, "provider");
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-exports.loginProvider = async (req, res) => {
+exports.loginProvider = async (req, res, io) => {
   try {
     const { email, password } = req.body;
     const providerExists = await providerModel.findOne({ email });
@@ -53,6 +97,11 @@ exports.loginProvider = async (req, res) => {
       return res.status(403).json({ message: "You are not authorized yet!" });
     }
     generateToken(res, 200, providerExists, "provider");
+    // Emit Socket.IO login success event
+    io.to(providerExists._id.toString()).emit("loginSuccess", {
+      providerId: providerExists._id,
+      message: "Login successful",
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -317,14 +366,10 @@ exports.updateMandap = async (req, res) => {
       { new: true }
     );
 
-    // if(updatemandap) {
     res.status(200).json({
       message: "Mandap updated successfully",
       updatemandap,
     });
-    // } else {
-    // res.status(404).json({ message: "Mandap not found" , mandap });
-    // }
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

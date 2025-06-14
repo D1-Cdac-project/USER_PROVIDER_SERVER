@@ -6,21 +6,39 @@ const {
   addProvider,
   addUser,
   registerAdmin,
+  getPendingApprovalRequests,
+  handleApprovalRequest,
+  getAdminNotifications,
+  markNotificationAsRead,
+  getAllProviders,
 } = require("../controllers/adminControllers");
 const { isAdmin } = require("../middlewares/verifyAdmin");
 
 const router = express.Router();
 
-router.post("/login", loginAdmin);
-
+// Admin authentication routes
 router.post("/signup", registerAdmin);
-
+router.post("/login", (req, res) => loginAdmin(req, res, req.io));
 router.post("/logout", logoutAdmin);
 
-router.post("/addUser", isAdmin, addUser);
+// Admin user/provider management routes
+router.post("/add-user", isAdmin, (req, res) => addUser(req, res, req.io));
+router.post("/add-provider", isAdmin, (req, res) =>
+  addProvider(req, res, req.io)
+);
 
-router.post("/addProvider", isAdmin, addProvider);
+// Approval request routes
+router.get("/approval-requests", isAdmin, getPendingApprovalRequests);
+router.post("/approve-request", isAdmin, (req, res) =>
+  handleApprovalRequest(req, res, req.io)
+);
 
-router.get("/getAllUsers", isAdmin, getAllUsers);
+// Notification routes
+router.get("/notifications", isAdmin, getAdminNotifications);
+router.post("/notifications/mark-read", isAdmin, markNotificationAsRead);
+
+// User/provider listing routes
+router.get("/users", isAdmin, getAllUsers);
+router.get("/providers", isAdmin, getAllProviders);
 
 module.exports = router;
