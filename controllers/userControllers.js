@@ -209,7 +209,29 @@ exports.deleteBooking = async (req, res) => {
   }
 };
 
-exports.updateBooking = async (req, res) => {};
+exports.updateBooking = async (req, res) => {
+  try {
+    const { id } = req.params;        
+    const updateData = req.body;      
+
+    const updatedBooking = await bookingModel.findByIdAndUpdate(id, updateData, {
+      new: true,                    
+      runValidators: true,           
+    });
+
+    if (!updatedBooking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({
+      message: "Booking updated successfully",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 
 //mandap related  --vaishnavi
 exports.getAllFavoriteMandaps = async (req, res) => {};
