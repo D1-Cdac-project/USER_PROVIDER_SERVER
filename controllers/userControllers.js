@@ -1,12 +1,18 @@
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 
+//config
 const userModel = require("../models/userModel");
 const bookingModel = require("../models/bookingModel")
 const generateToken = require("../config/generateToken");
+const { sendRegistrationEmail } = require("../config/mailer");
+
+const userModel = require("../models/userModel");
+const adminModel = require("../models/adminModel");
+const notificationModel = require("../models/notificationModel");
 
 // Register a new user
-exports.registerUser = async (req, res) => {
+exports.registerUser = async (req, res, io) => {
   try {
     const { fullName, email, phoneNumber, password } = req.body;
     const userExist = await userModel.findOne({ email });
@@ -21,6 +27,32 @@ exports.registerUser = async (req, res) => {
       password,
     });
 
+    // Send registration confirmation email
+    await sendRegistrationEmail(user.email, user.fullName, "user");
+
+    // Create notifications for all admins
+    const admins = await adminModel.find({});
+    const notificationPromises = admins.map(async (admin) => {
+      return notificationModel.create({
+        recipientId: admin._id,
+        type: "user_registration",
+        message: `New user registered: ${user.fullName} (${user.email})`,
+        relatedId: user._id,
+        relatedModel: "Users",
+      });
+    });
+    await Promise.all(notificationPromises);
+
+    // Emit Socket.IO event to notify admin
+    io.emit("newUserRegistration", {
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+      },
+      createdAt: new Date(),
+    });
+
     generateToken(res, 201, user, "user");
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -28,7 +60,7 @@ exports.registerUser = async (req, res) => {
 };
 
 // Login an existing user
-exports.loginUser = async (req, res) => {
+exports.loginUser = async (req, res, io) => {
   try {
     const { email, password } = req.body;
     const userExist = await userModel.findOne({ email });
@@ -42,6 +74,12 @@ exports.loginUser = async (req, res) => {
     }
 
     generateToken(res, 200, userExist, "user");
+
+    // Emit Socket.IO login success event
+    io.to(userExist._id.toString()).emit("loginSuccess", {
+      userId: userExist._id,
+      message: "Login successful",
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -73,9 +111,9 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
+// updating the user profile
 exports.updateProfile = async (req, res) => {
   try {
-    // Prepare update object
     const { fullName, email, phoneNumber, password, address } = req.body;
     const update = {};
     if (fullName) update.fullName = fullName;
