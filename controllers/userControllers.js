@@ -2,12 +2,11 @@ const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 
 //config
-const userModel = require("../models/userModel");
-const bookingModel = require("../models/bookingModel")
 const generateToken = require("../config/generateToken");
 const { sendRegistrationEmail } = require("../config/mailer");
 
 const userModel = require("../models/userModel");
+const bookingModel = require("../models/bookingModel")
 const adminModel = require("../models/adminModel");
 const notificationModel = require("../models/notificationModel");
 
