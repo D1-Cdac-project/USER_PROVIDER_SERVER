@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 
 const userModel = require("../models/userModel");
+const bookingModel = require("../models/bookingModel")
 const generateToken = require("../config/generateToken");
 
 // Register a new user
@@ -126,8 +127,30 @@ exports.updateProfile = async (req, res) => {
 };
 
 //booking related --akshay
+exports.addBooking = async (req, res) => {
+  try{
+    const{mandapId, availableDates, photographer, caterer, room} = req.body;
+
+    const userId = req.user.id;
+
+    const newBooking = new bookingModel({
+      mandapId, 
+      userId,
+      availableDates, 
+      photographer, 
+      caterer,
+      room
+    });
+
+    await newBooking.save();
+
+    res.status(201).json({message : "Booking added successfully.", booking : newBooking});
+  }
+  catch(error){
+    res.status(500).json({ message : "Server error.", error : error.message});
+  }
+};
 exports.getAllBookings = async (req, res) => {};
-exports.addBooking = async (req, res) => {};
 exports.updateBooking = async (req, res) => {};
 exports.deleteBooking = async (req, res) => {};
 exports.getBookingById = async (req, res) => {};

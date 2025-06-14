@@ -8,6 +8,7 @@ const {
   getAllFavoriteMandaps,
   addFavoriteMandap,
   deleteFavoriteMandap,
+  addBooking,
 } = require("../controllers/userControllers");
 const { isUser } = require("../middlewares/verifyUser");
 const router = express.Router();
@@ -16,7 +17,10 @@ router.post("/signup", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", isUser, logoutUser);
 router.get("/profile", isUser, getUserDetails);
-router.put("/update-profile", isUser, updateProfile);
+router.put("/update-profile", updateProfile);
+
+router.post("/add-booking", isUser, addBooking)
+
 router.get("/favourite-mandaps", isUser, getAllFavoriteMandaps);
 router.post("/favourite-mandap", isUser, addFavoriteMandap);
 router.delete("/favourite-mandap/:mandapId", isUser, deleteFavoriteMandap);
