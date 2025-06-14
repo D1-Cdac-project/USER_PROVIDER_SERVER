@@ -172,9 +172,29 @@ exports.getAllBookings = async (req, res) => {
   }
 };
 
+exports.getBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const booking = await bookingModel
+      .findById(id)
+      .populate("mandapId")
+      .populate("userId")
+      .populate("photographer")
+      .populate("caterer");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({ booking });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 exports.updateBooking = async (req, res) => {};
 exports.deleteBooking = async (req, res) => {};
-exports.getBookingById = async (req, res) => {};
 
 //mandap related  --vaishnavi
 exports.getAllFavoriteMandaps = async (req, res) => {};
