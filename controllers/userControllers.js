@@ -269,10 +269,19 @@ exports.updateBooking = async (req, res) => {
     const updatedBooking = await bookingModel.findByIdAndUpdate(id, updateData, {
       new: true,                    
       runValidators: true,           
-    });
+    }).populate("mandapId");
 
     if (!updatedBooking) {
       return res.status(404).json({ message: "Booking not found" });
+    }
+
+    //Notify provider of booking update
+    const providerId = updatedBooking.mandapId?.providerId;
+    if (providerId && req.io) {
+      req.io.to(providerId.toString()).emit("bookingUpdated", {
+        message: "Booking has been updated",
+        booking: updatedBooking,
+      });
     }
 
     res.status(200).json({
