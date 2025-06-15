@@ -6,6 +6,7 @@ const generateToken = require("../config/generateToken");
 const { sendRegistrationEmail } = require("../config/mailer");
 
 const userModel = require("../models/userModel");
+const bookingModel = require("../models/bookingModel")
 const adminModel = require("../models/adminModel");
 const notificationModel = require("../models/notificationModel");
 
@@ -163,11 +164,114 @@ exports.updateProfile = async (req, res) => {
 };
 
 //booking related --akshay
-exports.getAllBookings = async (req, res) => {};
-exports.addBooking = async (req, res) => {};
-exports.updateBooking = async (req, res) => {};
-exports.deleteBooking = async (req, res) => {};
-exports.getBookingById = async (req, res) => {};
+exports.addBooking = async (req, res) => {
+  try{
+    const{
+      mandapId, 
+      availableDates, 
+      photographer, 
+      caterer, 
+      room
+    } = req.body;
+
+    const userId = req.user.id;
+
+    const newBooking = new bookingModel({
+      mandapId, 
+      userId,
+      availableDates, 
+      photographer, 
+      caterer,
+      room
+    });
+
+    await newBooking.save();
+
+    res.status(201).json({message : "Booking added successfully.", booking : newBooking});
+  }
+  catch(error){
+    res.status(500).json({ message : "Server error.", error : error.message});
+  }
+};
+
+exports.getAllBookings = async (req, res) => {
+  try {
+    const bookings = await bookingModel
+      .find({ isActive: true })
+      .populate("mandapId")
+      .populate("userId")
+      .populate("photographer")
+      .populate("caterer");
+
+    res.status(200).json({ bookings });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.getBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const booking = await bookingModel
+      .findById(id)
+      .populate("mandapId")
+      .populate("userId")
+      .populate("photographer")
+      .populate("caterer");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({ booking });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.deleteBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await bookingModel.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true, runValidators: true }
+    );
+    if (!deleted) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({ message: "Booking deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.updateBooking = async (req, res) => {
+  try {
+    const { id } = req.params;        
+    const updateData = req.body;      
+
+    const updatedBooking = await bookingModel.findByIdAndUpdate(id, updateData, {
+      new: true,                    
+      runValidators: true,           
+    });
+
+    if (!updatedBooking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({
+      message: "Booking updated successfully",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 
 //mandap related  --vaishnavi
 exports.getAllFavoriteMandaps = async (req, res) => {};
