@@ -5,6 +5,7 @@ const providerModel = require("../models/providerModel");
 const addressModel = require("../models/addressModel");
 const mandapModel = require("../models/mandapModel");
 const approvalRequestModel = require("../models/approvalRequestModel");
+const photographerModel = require("../models/photographerModel");
 
 //related to provider  -- akshay
 exports.registerProvider = async (req, res) => {
@@ -363,9 +364,35 @@ exports.updateRoom = async (req, res) => {};
 exports.deleteRoom = async (req, res) => {};
 
 //Photographer related   -- tanay
-exports.addPhotographer = async (req, res) => {};
-exports.updatePhotographer = async (req, res) => {};
-exports.deletePhotographer = async (req, res) => {};
+exports.addPhotographer = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+  try{
+    const {
+      mandapId,
+      photographerName,
+      photographyTypes
+    } = req.body;
+    const result = await photographerModel.create(
+      {
+        mandapId,
+        photographerName,
+        photographyTypes
+      }
+    )
+    res.status(201).json({
+      message: "Photographer added successfully",
+    });
+  }
+  catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+}
+exports.updatePhotographer = async (req, res) => {}
+exports.deletePhotographer = async (req, res) => {}
+exports.getAllPhotographers = async (req, res) => {}
+exports.getPhotographerById = async (req, res) => {}
 
 //caterer related   --tanay
 exports.addCaterer = async (req, res) => {};
