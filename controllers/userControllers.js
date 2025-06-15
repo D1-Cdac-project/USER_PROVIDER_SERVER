@@ -187,6 +187,18 @@ exports.addBooking = async (req, res) => {
 
     await newBooking.save();
 
+    //Fetch the mandap with providerId populated
+    const populatedBooking = await newBooking.populate("mandapId");
+    const providerId = populatedBooking.mandapId?.providerId;
+
+    //Send socket event to the provider
+    if (providerId && req.io) {
+      req.io.to(providerId.toString()).emit("newBooking", {
+        message: "You have a new booking",
+        booking: populatedBooking,
+      });
+    }
+
     res.status(201).json({message : "Booking added successfully.", booking : newBooking});
   }
   catch(error){
