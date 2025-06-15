@@ -197,7 +197,7 @@ exports.addBooking = async (req, res) => {
 exports.getAllBookings = async (req, res) => {
   try {
     const bookings = await bookingModel
-      .find()
+      .find({ isActive: true })
       .populate("mandapId")
       .populate("userId")
       .populate("photographer")
