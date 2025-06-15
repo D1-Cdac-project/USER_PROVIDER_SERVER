@@ -208,7 +208,6 @@ exports.createMandap = async (req, res) => {
       pinCode,
       availableDates,
       venueType,
-      address,
       penaltyChargesPerHour,
       cancellationPolicy,
       venueImages,
@@ -222,7 +221,7 @@ exports.createMandap = async (req, res) => {
       isExternalCateringAllowed,
     } = req.body;
 
-    const address1 = await addressModel.create({
+    const mandapAddress = await addressModel.create({
       state,
       city,
       pinCode,
@@ -234,7 +233,7 @@ exports.createMandap = async (req, res) => {
       providerId: req.provider._id,
       availableDates,
       venueType,
-      address: address1._id,
+      address: mandapAddress._id,
       penaltyChargesPerHour,
       cancellationPolicy,
       venueImages,
@@ -402,7 +401,29 @@ exports.addPhotographer = async (req, res) => {
 }
 exports.updatePhotographer = async (req, res) => {}
 exports.deletePhotographer = async (req, res) => {}
-exports.getAllPhotographers = async (req, res) => {}
+exports.getAllPhotographers = async (req, res) => {
+  const { mandapId } = req.params;
+  mandap = await mandapModel.findById(mandapId);
+  if (!mandap) {
+    return res.status(404).json({ message: "Mandap not found" });
+  }
+  if (!mandap.isActive) {
+    return res.status(400).json({ message: "Mandap is not active" });
+  }
+  try {
+    const photographers = await photographerModel.find({ mandapId });
+    if (photographers.length > 0) {
+      res.status(200).json({
+        message: "Photographers fetched successfully",
+        photographers,
+      });
+    } else {
+      res.status(404).json({ message: "No photographers found" });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+}
 exports.getPhotographerById = async (req, res) => {}
 
 //caterer related   --tanay
