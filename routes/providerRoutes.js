@@ -11,6 +11,7 @@ const {
   getAllMandapByProviderID,
   updateMandap,
   deleteMandap,
+  getAllBookings,
 } = require("../controllers/providerControllers");
 
 // Initialize router
@@ -28,5 +29,8 @@ router.post("/mandap", isProvider, createMandap);
 router.get("/getmandap", isProvider, getAllMandapByProviderID);
 router.put("/updatemandap/:mandapid", isProvider, updateMandap);
 router.delete("/deletemandap/:mandapid", isProvider, deleteMandap);
+
+//booking routes
+router.get("/bookings", isProvider, getAllBookings)
 
 module.exports = router;

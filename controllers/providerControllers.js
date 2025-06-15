@@ -13,6 +13,7 @@ const mandapModel = require("../models/mandapModel");
 const notificationModel = require("../models/notificationModel");
 const providerModel = require("../models/providerModel");
 const userModel = require("../models/userModel");
+const bookingModel = require("../models/bookingModel")
 
 //related to provider  -- akshay
 exports.registerProvider = async (req, res, io) => {
@@ -240,7 +241,38 @@ exports.updateProvider = async (req, res) => {
 };
 
 //related to booking
-exports.getAllBookings = async (req, res) => {};
+exports.getAllBookings = async (req, res) => {
+  try {
+    const provider = req.provider;
+
+    if (!provider || !provider._id) {
+      return res.status(401).json({ message: "Unauthorized access" });
+    }
+
+    // Get all mandaps owned by the provider
+    const mandaps = await mandapModel.find({ providerId: provider._id });
+
+    const mandapIds = mandaps.map((mandap) => mandap._id);
+
+    if (mandapIds.length === 0) {
+      return res.status(200).json({ bookings: [], message: "No mandaps found" });
+    }
+
+    // Find all bookings related to those mandaps
+    const bookings = await bookingModel
+      .find({ mandapId: { $in: mandapIds } })
+      .populate("userId", "name email")
+      .populate("mandapId", "name location")
+      .populate("roomId", "roomNumber type price") 
+      .populate("photographerId", "name price")    
+      .populate("catererId", "name price")      
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({ bookings });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
 //Related to mandap   --tanay
 exports.createMandap = async (req, res) => {
