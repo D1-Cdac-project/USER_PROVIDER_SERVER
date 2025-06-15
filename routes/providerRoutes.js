@@ -11,6 +11,7 @@ const {
   getAllMandapByProviderID,
   updateMandap,
   deleteMandap,
+  addPhotographer
 } = require("../controllers/providerControllers");
 
 const router = express.Router();
@@ -28,4 +29,6 @@ router.get("/getmandap", isProvider, getAllMandapByProviderID);
 router.put("/updatemandap/:mandapid", isProvider, updateMandap);
 router.delete("/deletemandap/:mandapid", isProvider, deleteMandap);
 
+// Photographer routes
+router.post("/addphotographer", isProvider, addPhotographer);
 module.exports = router;
