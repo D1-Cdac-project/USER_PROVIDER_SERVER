@@ -246,13 +246,23 @@ exports.deleteBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deleted = await bookingModel.findByIdAndUpdate(
+    const booking = await bookingModel.findByIdAndUpdate(
       id,
       { isActive: false },
       { new: true, runValidators: true }
-    );
-    if (!deleted) {
+    ).populate("mandapId");
+
+    if (!booking) {
       return res.status(404).json({ message: "Booking not found" });
+    }
+
+    //Notify provider of booking cancellation
+    const providerId = booking.mandapId?.providerId;
+    if (providerId && req.io) {
+      req.io.to(providerId.toString()).emit("bookingCancelled", {
+        message: "Booking has been cancelled",
+        booking,
+      });
     }
 
     res.status(200).json({ message: "Booking deleted successfully" });
