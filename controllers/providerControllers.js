@@ -202,6 +202,10 @@ exports.createMandap = async (req, res) => {
   try {
     const {
       mandapName,
+      fullAddress,
+      city,
+      state,
+      pinCode,
       availableDates,
       venueType,
       address,
@@ -218,12 +222,19 @@ exports.createMandap = async (req, res) => {
       isExternalCateringAllowed,
     } = req.body;
 
+    const address1 = await addressModel.create({
+      state,
+      city,
+      pinCode,
+      fullAddress,
+    });
+
     const mandap = await mandapModel.create({
       mandapName,
       providerId: req.provider._id,
       availableDates,
       venueType,
-      address,
+      address: address1._id,
       penaltyChargesPerHour,
       cancellationPolicy,
       venueImages,
