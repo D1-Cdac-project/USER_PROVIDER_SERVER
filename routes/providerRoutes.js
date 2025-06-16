@@ -32,5 +32,5 @@ router.delete("/delete-mandap/:mandapId", isProvider, deleteMandap);
 
 // Photographer routes
 router.post("/addphotographer", isProvider, addPhotographer);
-router.get("/get-all-photographer/:madapId", isProvider, getAllPhotographers);
+router.get("/get-all-photographers/:mandapId", isProvider, getAllPhotographers);
 module.exports = router;
