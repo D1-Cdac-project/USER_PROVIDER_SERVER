@@ -11,6 +11,10 @@ const {
   getAllMandapByProviderID,
   updateMandap,
   deleteMandap,
+  addPhotographer,
+  getAllPhotographers,
+  updatePhotographer,
+  deletePhotographer
 } = require("../controllers/providerControllers");
 
 // Initialize router
@@ -25,8 +29,13 @@ router.put("/update-profile", isProvider, updateProvider);
 
 // Mandap routes
 router.post("/mandap", isProvider, createMandap);
-router.get("/getmandap", isProvider, getAllMandapByProviderID);
-router.put("/updatemandap/:mandapid", isProvider, updateMandap);
-router.delete("/deletemandap/:mandapid", isProvider, deleteMandap);
+router.get("/get-mandap", isProvider, getAllMandapByProviderID);
+router.put("/update-mandap/:mandapId", isProvider, updateMandap);
+router.delete("/delete-mandap/:mandapId", isProvider, deleteMandap);
 
+// Photographer routes
+router.post("/addphotographer", isProvider, addPhotographer);
+router.get("/get-all-photographers/:mandapId", isProvider, getAllPhotographers);
+router.put("/update-photographer/:photographerId", isProvider, updatePhotographer);
+router.delete("/delete-photographer/:photographerId", isProvider, deletePhotographer);
 module.exports = router;
