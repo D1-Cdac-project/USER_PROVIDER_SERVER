@@ -425,7 +425,31 @@ exports.updatePhotographer = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 }
-exports.deletePhotographer = async (req, res) => {}
+exports.deletePhotographer = async (req, res) => {
+  if( !req.provider) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+  try {
+    const { photographerId } = req.params;
+    const photographer = await photographerModel.findById(photographerId);
+    if (!photographer) {
+      return res.status(404).json({ message: "Photographer not found" });
+    }
+    const deletePhotographer = await photographerModel.updateOne(
+      { _id: photographerId },
+      { $set: { isActive: false } }
+    );
+    if (deletePhotographer.modifiedCount > 0) {
+      res.status(200).json({
+        message: "Photographer deleted successfully",
+        photographer,
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+}
+
 exports.getAllPhotographers = async (req, res) => {
   const { mandapId } = req.params;
   mandap = await mandapModel.findById(mandapId);
@@ -436,7 +460,7 @@ exports.getAllPhotographers = async (req, res) => {
     return res.status(400).json({ message: "Mandap is not active" });
   }
   try {
-    const photographers = await photographerModel.find({ mandapId });
+    const photographers = await photographerModel.find({ mandapId , isActive: true });
     if (photographers.length > 0) {
       res.status(200).json({
         message: "Photographers fetched successfully",
