@@ -1,11 +1,17 @@
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
 
-const userModel = require("../models/userModel");
+//config
 const generateToken = require("../config/generateToken");
+const { sendRegistrationEmail } = require("../config/mailer");
+
+const userModel = require("../models/userModel");
+const bookingModel = require("../models/bookingModel")
+const adminModel = require("../models/adminModel");
+const notificationModel = require("../models/notificationModel");
 
 // Register a new user
-exports.registerUser = async (req, res) => {
+exports.registerUser = async (req, res, io) => {
   try {
     const { fullName, email, phoneNumber, password } = req.body;
     const userExist = await userModel.findOne({ email });
@@ -20,6 +26,32 @@ exports.registerUser = async (req, res) => {
       password,
     });
 
+    // Send registration confirmation email
+    await sendRegistrationEmail(user.email, user.fullName, "user");
+
+    // Create notifications for all admins
+    const admins = await adminModel.find({});
+    const notificationPromises = admins.map(async (admin) => {
+      return notificationModel.create({
+        recipientId: admin._id,
+        type: "user_registration",
+        message: `New user registered: ${user.fullName} (${user.email})`,
+        relatedId: user._id,
+        relatedModel: "Users",
+      });
+    });
+    await Promise.all(notificationPromises);
+
+    // Emit Socket.IO event to notify admin
+    io.emit("newUserRegistration", {
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+      },
+      createdAt: new Date(),
+    });
+
     generateToken(res, 201, user, "user");
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -27,7 +59,7 @@ exports.registerUser = async (req, res) => {
 };
 
 // Login an existing user
-exports.loginUser = async (req, res) => {
+exports.loginUser = async (req, res, io) => {
   try {
     const { email, password } = req.body;
     const userExist = await userModel.findOne({ email });
@@ -41,6 +73,12 @@ exports.loginUser = async (req, res) => {
     }
 
     generateToken(res, 200, userExist, "user");
+
+    // Emit Socket.IO login success event
+    io.to(userExist._id.toString()).emit("loginSuccess", {
+      userId: userExist._id,
+      message: "Login successful",
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
@@ -72,9 +110,9 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
+// updating the user profile
 exports.updateProfile = async (req, res) => {
   try {
-    // Prepare update object
     const { fullName, email, phoneNumber, password, address } = req.body;
     const update = {};
     if (fullName) update.fullName = fullName;
@@ -126,11 +164,114 @@ exports.updateProfile = async (req, res) => {
 };
 
 //booking related --akshay
-exports.getAllBookings = async (req, res) => {};
-exports.addBooking = async (req, res) => {};
-exports.updateBooking = async (req, res) => {};
-exports.deleteBooking = async (req, res) => {};
-exports.getBookingById = async (req, res) => {};
+exports.addBooking = async (req, res) => {
+  try{
+    const{
+      mandapId, 
+      availableDates, 
+      photographer, 
+      caterer, 
+      room
+    } = req.body;
+
+    const userId = req.user.id;
+
+    const newBooking = new bookingModel({
+      mandapId, 
+      userId,
+      availableDates, 
+      photographer, 
+      caterer,
+      room
+    });
+
+    await newBooking.save();
+
+    res.status(201).json({message : "Booking added successfully.", booking : newBooking});
+  }
+  catch(error){
+    res.status(500).json({ message : "Server error.", error : error.message});
+  }
+};
+
+exports.getAllBookings = async (req, res) => {
+  try {
+    const bookings = await bookingModel
+      .find({ isActive: true })
+      .populate("mandapId")
+      .populate("userId")
+      .populate("photographer")
+      .populate("caterer");
+
+    res.status(200).json({ bookings });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.getBookingById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const booking = await bookingModel
+      .findById(id)
+      .populate("mandapId")
+      .populate("userId")
+      .populate("photographer")
+      .populate("caterer");
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({ booking });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.deleteBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await bookingModel.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true, runValidators: true }
+    );
+    if (!deleted) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({ message: "Booking deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+exports.updateBooking = async (req, res) => {
+  try {
+    const { id } = req.params;        
+    const updateData = req.body;      
+
+    const updatedBooking = await bookingModel.findByIdAndUpdate(id, updateData, {
+      new: true,                    
+      runValidators: true,           
+    });
+
+    if (!updatedBooking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    res.status(200).json({
+      message: "Booking updated successfully",
+      booking: updatedBooking,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 
 //mandap related  --vaishnavi
 exports.getAllFavoriteMandaps = async (req, res) => {};

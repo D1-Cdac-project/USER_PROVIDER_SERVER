@@ -17,11 +17,12 @@ const {
   deletePhotographer
 } = require("../controllers/providerControllers");
 
+// Initialize router
 const router = express.Router();
 
 // Provider routes
-router.post("/signup", registerProvider);
-router.post("/login", loginProvider);
+router.post("/signup", (req, res) => registerProvider(req, res, req.io));
+router.post("/login", (req, res) => loginProvider(req, res, req.io));
 router.post("/logout", logoutProvider);
 router.get("/profile", isProvider, getProvider);
 router.put("/update-profile", isProvider, updateProvider);
