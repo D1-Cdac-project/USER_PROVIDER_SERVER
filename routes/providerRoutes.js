@@ -12,7 +12,8 @@ const {
   updateMandap,
   deleteMandap,
   addPhotographer,
-  getAllPhotographers
+  getAllPhotographers,
+  updatePhotographer
 } = require("../controllers/providerControllers");
 
 const router = express.Router();
@@ -33,4 +34,5 @@ router.delete("/delete-mandap/:mandapId", isProvider, deleteMandap);
 // Photographer routes
 router.post("/addphotographer", isProvider, addPhotographer);
 router.get("/get-all-photographers/:mandapId", isProvider, getAllPhotographers);
+router.put("/update-photographer/:photographerId", isProvider, updatePhotographer);
 module.exports = router;

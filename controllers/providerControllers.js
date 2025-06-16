@@ -399,7 +399,32 @@ exports.addPhotographer = async (req, res) => {
     return res.status(500).json({ message: error.message });
   }
 }
-exports.updatePhotographer = async (req, res) => {}
+exports.updatePhotographer = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json({ message: "Invalid Request" });
+  }
+  try {
+    const { photographerId } = req.params;
+    const photographer = await photographerModel.findById(photographerId);
+    if (!photographer) {
+      return res.status(404).json({ message: "Photographer not found" });
+    }
+    const { photographerName, photographyTypes } = req.body;
+
+    const updatedPhotographer = await photographerModel.findByIdAndUpdate(
+      photographerId,
+      { photographerName, photographyTypes },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: "Photographer updated successfully",
+      updatedPhotographer,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+}
 exports.deletePhotographer = async (req, res) => {}
 exports.getAllPhotographers = async (req, res) => {
   const { mandapId } = req.params;
