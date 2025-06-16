@@ -26,9 +26,9 @@ router.put("/update-profile", isProvider, updateProvider);
 
 // Mandap routes
 router.post("/mandap", isProvider, createMandap);
-router.get("/getmandap", isProvider, getAllMandapByProviderID);
-router.put("/updatemandap/:mandapid", isProvider, updateMandap);
-router.delete("/deletemandap/:mandapid", isProvider, deleteMandap);
+router.get("/get-mandap", isProvider, getAllMandapByProviderID);
+router.put("/update-mandap/:mandapId", isProvider, updateMandap);
+router.delete("/delete-mandap/:mandapId", isProvider, deleteMandap);
 
 // Photographer routes
 router.post("/addphotographer", isProvider, addPhotographer);
