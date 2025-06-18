@@ -281,6 +281,27 @@ exports.markNotificationAsRead = async (req, res) => {
   }
 };
 
-exports.getAllUsers = () => {};
+exports.getAllUsers = (req, res) => {
+  userModel
+    .find({})
+    .select("-password -__v")
+    .then((users) => {
+      res.status(200).json({ users });
+    })
+    .catch((error) => {
+      res.status(500).json({ message: error.message });
+    });
+};
 
-exports.getAllProviders = () => {};
+exports.getAllProviders = (req, res) => {
+  providerModel
+    .find({})
+    .select("-password -__v")
+    .then((providers) => {
+      console.log("Fetched providers:", providers);
+      res.status(200).json({ providers });
+    })
+    .catch((error) => {
+      res.status(500).json({ message: error.message });
+    });
+};
