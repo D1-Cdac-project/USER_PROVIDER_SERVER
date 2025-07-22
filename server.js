@@ -20,6 +20,7 @@ const server = http.createServer(app);
 env.config();
 
 //middlewares
+app.use(express.static("public")); // Optional: for serving static files
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
