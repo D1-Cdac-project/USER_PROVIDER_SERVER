@@ -1,22 +1,20 @@
 const bcrypt = require("bcrypt");
-const mongoose = require("mongoose");
-
-//config
+const jwt = require("jsonwebtoken");
+const { createSuccessResult, createErrorResult } = require("../config/result");
 const generateToken = require("../config/generateToken");
 const { sendRegistrationEmail } = require("../config/mailer");
-
 const userModel = require("../models/userModel");
-const bookingModel = require("../models/bookingModel")
 const adminModel = require("../models/adminModel");
 const notificationModel = require("../models/notificationModel");
+const mandapModel = require("../models/mandapModel");
+const reviewModel = require("../models/reviewModel");
 
-// Register a new user
 exports.registerUser = async (req, res, io) => {
   try {
     const { fullName, email, phoneNumber, password } = req.body;
     const userExist = await userModel.findOne({ email });
     if (userExist) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json(createErrorResult("User already exists"));
     }
 
     const user = await userModel.create({
@@ -26,10 +24,8 @@ exports.registerUser = async (req, res, io) => {
       password,
     });
 
-    // Send registration confirmation email
     await sendRegistrationEmail(user.email, user.fullName, "user");
 
-    // Create notifications for all admins
     const admins = await adminModel.find({});
     const notificationPromises = admins.map(async (admin) => {
       return notificationModel.create({
@@ -42,75 +38,71 @@ exports.registerUser = async (req, res, io) => {
     });
     await Promise.all(notificationPromises);
 
-    // Emit Socket.IO event to notify admin
     io.emit("newUserRegistration", {
-      user: {
-        _id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-      },
+      user: { _id: user._id, fullName: user.fullName, email: user.email },
       createdAt: new Date(),
     });
 
-    generateToken(res, 201, user, "user");
+    return generateToken(res, 201, user, "user");
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
 
-// Login an existing user
 exports.loginUser = async (req, res, io) => {
   try {
     const { email, password } = req.body;
     const userExist = await userModel.findOne({ email });
     if (!userExist) {
-      return res.status(404).json({ message: "Invalid Email or Password" });
+      return res
+        .status(404)
+        .json(createErrorResult("Invalid Email or Password"));
     }
 
     const passwordMatch = await bcrypt.compare(password, userExist.password);
     if (!passwordMatch) {
-      return res.status(400).json({ message: "Invalid Email or Password" });
+      return res
+        .status(400)
+        .json(createErrorResult("Invalid Email or Password"));
     }
 
-    generateToken(res, 200, userExist, "user");
-
-    // Emit Socket.IO login success event
     io.to(userExist._id.toString()).emit("loginSuccess", {
       userId: userExist._id,
       message: "Login successful",
     });
+
+    return generateToken(res, 200, userExist, "user");
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
 
-// Logout the user
 exports.logoutUser = async (req, res) => {
   try {
     res.cookie("userToken", null, {
       expires: new Date(Date.now()),
       httpOnly: true,
     });
-    return res.status(200).json({ message: "Logout successful" });
+    return res
+      .status(200)
+      .json(createSuccessResult({ message: "Logout successful" }));
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
 
-//getting user details
 exports.getUserDetails = async (req, res) => {
   try {
-    if (!req.user) return res.status(400).json({ message: "Invalid Request" });
-    const user = await userModel.findOne({ _id: req.user._id });
-
-    if (!user) return res.status(404).json({ message: "No user found" });
-    return res.status(200).json({ user });
+    if (!req.user)
+      return res.status(400).json(createErrorResult("Invalid Request"));
+    const user = await userModel.findById(req.user._id).select("-password");
+    if (!user) return res.status(404).json(createErrorResult("No user found"));
+    return res.status(200).json(createSuccessResult({ user }));
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
 
-// updating the user profile
 exports.updateProfile = async (req, res) => {
   try {
     const { fullName, email, phoneNumber, password, address } = req.body;
@@ -120,204 +112,141 @@ exports.updateProfile = async (req, res) => {
     if (phoneNumber) update.phoneNumber = phoneNumber;
     if (address) {
       if (!mongoose.isValidObjectId(address)) {
-        return res.status(400).json({ message: "Invalid address ID" });
+        return res.status(400).json(createErrorResult("Invalid address ID"));
       }
       update.address = address;
     }
     if (password) {
-      update.password = await bcrypt.hash(password, 10); // Manually hash password
+      update.password = await bcrypt.hash(password, 10);
     }
 
-    // Update user
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { $set: update },
-      { new: true, runValidators: true }
-    ).select("-password"); // Exclude password from response
+    const user = await userModel
+      .findByIdAndUpdate(
+        req.user._id,
+        { $set: update },
+        { new: true, runValidators: true }
+      )
+      .select("-password");
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json(createErrorResult("User not found"));
     }
 
-    // Generate new JWT
     const newToken = jwt.sign({ id: user._id }, process.env.SECRET_KEY, {
       expiresIn: "5d",
     });
 
-    res.status(200).json({
-      message: "Profile updated successfully",
-      user,
-      token: newToken,
-    });
+    return res.status(200).json(
+      createSuccessResult({
+        message: "Profile updated successfully",
+      })
+    );
   } catch (error) {
     if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Invalid token" });
+      return res.status(401).json(createErrorResult("Invalid token"));
     }
     if (error.name === "ValidationError") {
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json(createErrorResult(error.message));
     }
     if (error.code === 11000) {
-      return res.status(400).json({ message: "Email already in use" });
+      return res.status(400).json(createErrorResult("Email already in use"));
     }
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
 
-//booking related --akshay
-exports.addBooking = async (req, res) => {
-  try{
-    const{
-      mandapId, 
-      availableDates, 
-      photographer, 
-      caterer, 
-      room
-    } = req.body;
-
-    const userId = req.user.id;
-
-    const newBooking = new bookingModel({
-      mandapId, 
-      userId,
-      availableDates, 
-      photographer, 
-      caterer,
-      room
-    });
-
-    await newBooking.save();
-
-    res.status(201).json({message : "Booking added successfully.", booking : newBooking});
-  }
-  catch(error){
-    res.status(500).json({ message : "Server error.", error : error.message});
-  }
-};
-
-exports.getAllBookings = async (req, res) => {
+exports.getCatererById = async (req, res) => {
   try {
-    const bookings = await bookingModel
+    const { catererId } = req.params;
+    const caterer = await catererModel.findById(catererId).populate("mandapId");
+    if (!caterer || !caterer.isActive) {
+      return res.status(404).json(createErrorResult("Caterer not found"));
+    }
+    return res.status(200).json(createSuccessResult({ caterer }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.getAllCaterersByMandapId = async (req, res) => {
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap || !mandap.isActive) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+
+    const caterers = await catererModel.find({ mandapId, isActive: true });
+    return res.status(200).json(createSuccessResult({ caterers }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.getReviewById = async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const review = await reviewModel
+      .findById(reviewId)
+      .populate("userId mandapId");
+    if (!review || !review.isActive) {
+      return res.status(404).json(createErrorResult("Review not found"));
+    }
+    return res.status(200).json(createSuccessResult({ review }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.getPhotographerByMandapId = async (req, res) => {
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap || !mandap.isActive) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+
+    const photographers = await photographerModel.find({
+      mandapId,
+      isActive: true,
+    });
+    return res.status(200).json(createSuccessResult({ photographers }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.getAllPhotographers = async (req, res) => {
+  try {
+    const photographers = await photographerModel
       .find({ isActive: true })
-      .populate("mandapId")
-      .populate("userId")
-      .populate("photographer")
-      .populate("caterer");
-
-    res.status(200).json({ bookings });
+      .populate("mandapId");
+    return res.status(200).json(createSuccessResult({ photographers }));
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
 
-exports.getBookingById = async (req, res) => {
+exports.getRoomByMandapId = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const booking = await bookingModel
-      .findById(id)
-      .populate("mandapId")
-      .populate("userId")
-      .populate("photographer")
-      .populate("caterer");
-
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap || !mandap.isActive) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
     }
 
-    res.status(200).json({ booking });
+    const rooms = await roomModel.find({ mandapId });
+    return res.status(200).json(createSuccessResult({ rooms }));
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
 
-exports.deleteBooking = async (req, res) => {
+exports.getAllRooms = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const deleted = await bookingModel.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true, runValidators: true }
-    );
-    if (!deleted) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    res.status(200).json({ message: "Booking deleted successfully" });
+    const rooms = await roomModel.find({});
+    return res.status(200).json(createSuccessResult({ rooms }));
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    return res.status(500).json(createErrorResult(error.message));
   }
 };
-
-exports.updateBooking = async (req, res) => {
-  try {
-    const { id } = req.params;        
-    const updateData = req.body;      
-
-    const updatedBooking = await bookingModel.findByIdAndUpdate(id, updateData, {
-      new: true,                    
-      runValidators: true,           
-    });
-
-    if (!updatedBooking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    res.status(200).json({
-      message: "Booking updated successfully",
-      booking: updatedBooking,
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-
-//mandap related  --vaishnavi
-exports.getAllFavoriteMandaps = async (req, res) => {};
-exports.addFavoriteMandap = async (req, res) => {
-  try {
-    if (!req.user) return res.status(400).json({ message: "Invalid Request" });
-    const { mandapId } = req.body;
-    const user = await userModel.findById(req.user._id);
-
-    if (user.favoriteMandaps && user.favoriteMandaps.includes(mandapId)) {
-      return res.status(400).json({
-        success: false,
-        message: "Mandap is already in favorites",
-      });
-    }
-
-    // Add mandapId to user's favorites array using update method
-    await userModel.findByIdAndUpdate(
-      user._id,
-      { $push: { favoriteMandaps: mandapId } },
-      { new: true, runValidators: true }
-    );
-
-    // Check if the user is authenticated
-    return res.status(200).json({
-      success: true,
-      message: "Favorite mandap added successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-//caterer related  --tanay
-exports.deleteFavoriteMandap = async (req, res) => {};
-
-//caterer related  --tanay
-exports.getCatererById = async (req, res) => {};
-
-//photographer related  --tanay
-exports.getPhotographerById = async (req, res) => {};
-
-//room related  --vaishnavi
-exports.getRoomById = async (req, res) => {};
-
-//review related  --vaishnavi
-exports.addReview = async (req, res) => {};
-exports.updateReviewById = async (req, res) => {};
-exports.deleteReviewById = async (req, res) => {};
