@@ -11,6 +11,8 @@ const {
   getAdminNotifications,
   markNotificationAsRead,
   getAllProviders,
+  searchUsers,
+  searchProviders,
 } = require("../controllers/adminControllers");
 const { isAdmin } = require("../middlewares/verifyAdmin");
 
@@ -40,5 +42,9 @@ router.post("/notifications/mark-read", isAdmin, markNotificationAsRead);
 // User/provider listing routes
 router.get("/users", isAdmin, getAllUsers);
 router.get("/providers", isAdmin, getAllProviders);
+
+// Search routes
+router.get("/search-users", isAdmin, searchUsers);
+router.get("/search-providers", isAdmin, searchProviders);
 
 module.exports = router;
