@@ -260,5 +260,17 @@ exports.getMandapByFilter = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+exports.getMandapByID = async (req, res) => {
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId).populate("address");
+    if (!mandap || !mandap.isActive) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+    return res.status(200).json(createSuccessResult({ mandap }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
 
 
