@@ -38,7 +38,7 @@ const mandapSchema = new mongoose.Schema(
     ],
     address: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "addresses",
+      ref: "Address",
       required: true,
     },
     penaltyChargesPerHour: {

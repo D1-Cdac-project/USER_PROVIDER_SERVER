@@ -1,24 +1,186 @@
-//mandap related  --vaishnavi
-exports.getAllMandaps = async (req, res) => {};
-exports.searchMandap = async (req, res) => {};
-exports.getMandapByFilter = async (req, res) => {};
-exports.getMandapByID = async (req, res) => {};
-exports.checkAvailability = async (req, res) => {};
+const { cloudinary } = require("../config/cloudinary");
+const addressModel = require("../models/addressModel");
+const mandapModel = require("../models/mandapModel");
+const { createSuccessResult, createErrorResult } = require("../config/result");
 
-//caterer related   --tanay
-exports.getCatererById = async (req, res) => {};
-exports.getAllCaterersByMandapId = async (req, res) => {};
+exports.createMandap = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json(createErrorResult("Invalid Request"));
+  }
+  try {
+    const {
+      mandapName,
+      fullAddress,
+      city,
+      state,
+      pinCode,
+      availableDates,
+      venueType,
+      penaltyChargesPerHour,
+      cancellationPolicy,
+      guestCapacity,
+      venuePricing,
+      securityDeposit,
+      securityDepositType,
+      amenities,
+      outdoorFacilities,
+      paymentOptions,
+      isExternalCateringAllowed,
+    } = req.body;
 
-//review related  --vaishnavi
-exports.getReviewById = async (req, res) => {};
+    let venueImages = [];
+    if (req.files && req.files.length > 0) {
+      venueImages = req.files.map((file) => file.path);
+    }
 
-//photographer related   --tanay
-exports.getPhotographerByMandapId = async (req, res) => {};
-exports.getAllPhotographers = async (req, res) => {};
+    const mandapAddress = await addressModel.create({
+      state,
+      city,
+      pinCode,
+      fullAddress,
+    });
 
-//room related    --vaishnavi
-exports.getRoomByMandapId = async (req, res) => {};
-exports.getAllRooms = async (req, res) => {};
+    await mandapModel.create({
+      mandapName,
+      providerId: req.provider._id,
+      availableDates,
+      venueType,
+      address: mandapAddress._id,
+      penaltyChargesPerHour,
+      cancellationPolicy,
+      venueImages,
+      guestCapacity,
+      venuePricing,
+      securityDeposit,
+      securityDepositType,
+      amenities,
+      outdoorFacilities,
+      paymentOptions,
+      isExternalCateringAllowed,
+    });
 
-//optional  --vaishnavi
-exports.getFeaturedMandaps = async (req, res) => {};
+    return res.status(201).json(
+      createSuccessResult({
+        message: "Mandap created successfully",
+      })
+    );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.getAllMandapByProviderID = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json(createErrorResult("Invalid Request"));
+  }
+  try {
+    const mandaps = await mandapModel.find({
+      providerId: req.provider._id,
+      isActive: true,
+    });
+    return res.status(200).json(
+      createSuccessResult({
+        message: "Mandaps fetched successfully",
+        mandaps,
+      })
+    );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.updateMandap = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json(createErrorResult("Invalid Request"));
+  }
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+
+    const {
+      mandapName,
+      availableDates,
+      venueType,
+      address,
+      penaltyChargesPerHour,
+      cancellationPolicy,
+      guestCapacity,
+      venuePricing,
+      securityDeposit,
+      securityDepositType,
+      amenities,
+      outdoorFacilities,
+      paymentOptions,
+      isExternalCateringAllowed,
+    } = req.body;
+
+    let venueImages = mandap.venueImages;
+    if (req.files && req.files.length > 0) {
+      for (const imageUrl of mandap.venueImages) {
+        const publicId = imageUrl.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+      }
+      venueImages = req.files.map((file) => file.path);
+    }
+
+    await mandapModel.findByIdAndUpdate(
+      mandapId,
+      {
+        mandapName,
+        availableDates,
+        venueType,
+        address,
+        penaltyChargesPerHour,
+        cancellationPolicy,
+        venueImages,
+        guestCapacity,
+        venuePricing,
+        securityDeposit,
+        securityDepositType,
+        amenities,
+        outdoorFacilities,
+        paymentOptions,
+        isExternalCateringAllowed,
+      },
+      { new: true }
+    );
+
+    return res.status(200).json(
+      createSuccessResult({
+        message: "Mandap updated successfully",
+      })
+    );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.deleteMandap = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json(createErrorResult("Invalid Request"));
+  }
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findOne({
+      _id: mandapId,
+      providerId: req.provider._id,
+    });
+    if (!mandap) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+    await mandapModel.updateOne(
+      { _id: mandapId },
+      { $set: { isActive: false } }
+    );
+    return res.status(200).json(
+      createSuccessResult({
+        message: "Mandap deleted successfully",
+      })
+    );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
