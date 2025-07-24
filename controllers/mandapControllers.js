@@ -184,3 +184,14 @@ exports.deleteMandap = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+exports.getAllMandaps = async (req, res) => {
+  try {
+    const mandaps = await mandapModel
+      .find({ isActive: true })
+      .populate("address");
+    return res.status(200).json(createSuccessResult({ mandaps }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
