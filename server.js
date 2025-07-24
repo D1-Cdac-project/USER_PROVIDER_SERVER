@@ -24,21 +24,60 @@ app.use(express.static("public")); // Optional: for serving static files
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Enhanced CORS configuration
 app.use(
   cors({
-    origin: ["http://localhost:5500", "http://localhost:3000"],
+    origin: [
+      "http://localhost:5500",
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://localhost:5176",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:5174",
+      "http://127.0.0.1:5175",
+      "http://127.0.0.1:5176",
+    ],
     methods: ["GET", "PUT", "POST", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-csrf-token",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+    ],
     credentials: true,
+    optionsSuccessStatus: 200, // For legacy browser support
   })
 );
 
 // Initialize Socket.IO with CORS configuration
 const io = socketIO(server, {
   cors: {
-    origin: ["http://localhost:5500", "http://localhost:3000"],
+    origin: [
+      "http://localhost:5500",
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://localhost:5176",
+      "http://127.0.0.1:5173",
+      "http://127.0.0.1:5174",
+      "http://127.0.0.1:5175",
+      "http://127.0.0.1:5176",
+    ],
     methods: ["GET", "PUT", "POST", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "x-csrf-token",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+    ],
     credentials: true,
   },
 });
@@ -89,6 +128,7 @@ mongoose.connect(process.env.MONGODB_CONNECTION).then(() => {
 });
 
 // Server listening
-app.listen(process.env.PORT, () => {
-  console.log("Server is running on port " + process.env.PORT);
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => {
+  console.log("Server is running on port " + PORT);
 });
