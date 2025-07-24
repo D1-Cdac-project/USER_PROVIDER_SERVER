@@ -65,3 +65,29 @@ exports.updateRoom = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+
+exports.deleteRoom = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json(createErrorResult("Invalid Request"));
+  }
+  try {
+    const { roomId } = req.params;
+    const room = await roomModel.findById(roomId);
+    if (!room) {
+      return res.status(404).json(createErrorResult("Room not found"));
+    }
+
+    const mandap = await mandapModel.findById(room.mandapId);
+    if (mandap.providerId.toString() !== req.provider._id.toString()) {
+      return res.status(403).json(createErrorResult("Unauthorized"));
+    }
+
+    await roomModel.findByIdAndUpdate(roomId, { isActive: false });
+    return res
+      .status(200)
+      .json(createSuccessResult({ message: "Room deleted successfully" }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
