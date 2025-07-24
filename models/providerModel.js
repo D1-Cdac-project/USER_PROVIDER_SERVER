@@ -2,43 +2,50 @@ const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const providerSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
+const providerSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+    email: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    password: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    address: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Address",
+    },
+    phoneNumber: {
+      type: Number,
+      required: true,
+      match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"],
+      min: 10,
+    },
+    isAuthorized: {
+      type: Boolean,
+      default: false,
+    },
+    providerLogo: {
+      type: String,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  email: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  address: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Address",
-  },
-  phoneNumber: {
-    type: Number,
-    required: true,
-    match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"],
-    min: 10,
-  },
-  isAuthorized: {
-    type: Boolean,
-    default: false,
-  },
-  providerLogo: {
-    type: String,
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
-  },
-});
+  { timestamps: true }
+);
 
 providerSchema.pre("save", async function (next) {
   const provider = this;
