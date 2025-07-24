@@ -1,0 +1,36 @@
+const { createErrorResult, createSuccessResult } = require("../config/result");
+const mandapModel = require("../models/mandapModel");
+const roomModel = require("../models/roomModel");
+
+exports.addRoom = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json(createErrorResult("Invalid Request"));
+  }
+  try {
+    const { mandapId, AcRoom, NonAcRoom } = req.body;
+    const mandap = await mandapModel.findById(mandapId);
+    if (
+      !mandap ||
+      mandap.providerId.toString() !== req.provider._id.toString()
+    ) {
+      return res
+        .status(404)
+        .json(createErrorResult("Mandap not found or unauthorized"));
+    }
+
+    await roomModel.create({
+      mandapId,
+      AcRoom,
+      NonAcRoom,
+    });
+
+    return res.status(201).json(
+      createSuccessResult({
+        message: "Room added successfully",
+      })
+    );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
