@@ -27,3 +27,35 @@ exports.addReview = async (req, res) => {
   }
 };
 
+
+exports.updateReviewById = async (req, res) => {
+  try {
+    if (!req.user)
+      return res.status(400).json(createErrorResult("Invalid Request"));
+    const { reviewId } = req.params;
+    const { rating, comment } = req.body;
+
+    const review = await reviewModel.findById(reviewId);
+    if (!review)
+      return res.status(404).json(createErrorResult("Review not found"));
+    if (review.userId.toString() !== req.user._id.toString()) {
+      return res.status(403).json(createErrorResult("Unauthorized"));
+    }
+
+    await reviewModel.findByIdAndUpdate(
+      reviewId,
+      { rating, comment },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json(
+      createSuccessResult({
+        message: "Review updated successfully",
+      })
+    );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+
