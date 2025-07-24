@@ -34,3 +34,34 @@ exports.addRoom = async (req, res) => {
   }
 };
 
+exports.updateRoom = async (req, res) => {
+  if (!req.provider) {
+    return res.status(400).json(createErrorResult("Invalid Request"));
+  }
+  try {
+    const { roomId } = req.params;
+    const { AcRoom, NonAcRoom } = req.body;
+    const room = await roomModel.findById(roomId);
+    if (!room) {
+      return res.status(404).json(createErrorResult("Room not found"));
+    }
+
+    const mandap = await mandapModel.findById(room.mandapId);
+    if (mandap.providerId.toString() !== req.provider._id.toString()) {
+      return res.status(403).json(createErrorResult("Unauthorized"));
+    }
+    await roomModel.findByIdAndUpdate(
+      roomId,
+      { AcRoom, NonAcRoom },
+      { new: true, runValidators: true }
+    );
+
+    return res.status(200).json(
+      createSuccessResult({
+        message: "Room updated successfully",
+      })
+    );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
