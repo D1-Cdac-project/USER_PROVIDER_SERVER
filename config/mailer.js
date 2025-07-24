@@ -13,7 +13,14 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
+//  Verify transporter configuration
+transporter.verify((error, success) => {
+  if (error) {
+    console.error("NodeMailer configuration error:", error);
+  } else {
+    console.log("NodeMailer is ready to send emails");
+  }
+});
 // Send registration email to users or providers
 const sendRegistrationEmail = async (to, name, role) => {
   try {
