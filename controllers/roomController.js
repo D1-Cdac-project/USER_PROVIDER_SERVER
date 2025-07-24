@@ -120,3 +120,32 @@ exports.getAllRooms = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+exports.getRoomById = async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    if (!req.provider) {
+      return res.status(400).json(createErrorResult("Invalid Request"));
+    }
+
+    const room = await roomModel.findById(roomId).populate("mandapId");
+    if (!room || !room.isActive) {
+      return res.status(404).json(createErrorResult("Room not found"));
+    }
+
+    const mandap = await mandapModel.findOne({
+      _id: room.mandapId,
+      providerId: req.provider._id,
+    });
+    if (!mandap) {
+      return res.status(403).json(createErrorResult("Unauthorized"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        createSuccessResult({ room, message: "Room fetched successfully" })
+      );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
