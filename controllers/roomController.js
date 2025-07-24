@@ -91,3 +91,32 @@ exports.deleteRoom = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+exports.getAllRooms = async (req, res) => {
+  try {
+    if (!req.provider) {
+      return res.status(400).json(createErrorResult("Invalid Request"));
+    }
+
+    const mandaps = await mandapModel
+      .find({ providerId: req.provider._id, isActive: true })
+      .distinct("_id");
+    if (!mandaps.length) {
+      return res.status(404).json(createErrorResult("No mandaps found"));
+    }
+
+    const rooms = await roomModel
+      .find({ mandapId: { $in: mandaps }, isActive: true })
+      .populate("mandapId");
+    if (!rooms.length) {
+      return res.status(404).json(createErrorResult("No rooms found"));
+    }
+
+    return res
+      .status(200)
+      .json(
+        createSuccessResult({ rooms, message: "Rooms fetched successfully" })
+      );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
