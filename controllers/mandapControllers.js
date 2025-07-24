@@ -228,3 +228,37 @@ exports.searchMandap = async (req, res) => {
 };
 
 
+exports.getMandapByFilter = async (req, res) => {
+  try {
+    const { city, state, venueType, minPrice, maxPrice, amenities } = req.body;
+    const filterCriteria = { isActive: true };
+
+    if (city || state) {
+      filterCriteria.address = await addressModel
+        .find({
+          ...(city && { city: { $regex: city, $options: "i" } }),
+          ...(state && { state }),
+        })
+        .distinct("_id");
+    }
+    if (venueType) {
+      filterCriteria.venueType = { $in: venueType };
+    }
+    if (minPrice || maxPrice) {
+      filterCriteria.venuePricing = {
+        ...(minPrice && { $gte: Number(minPrice) }),
+        ...(maxPrice && { $lte: Number(maxPrice) }),
+      };
+    }
+    if (amenities) {
+      filterCriteria.amenities = { $all: amenities };
+    }
+
+    const mandaps = await mandapModel.find(filterCriteria).populate("address");
+    return res.status(200).json(createSuccessResult({ mandaps }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+
