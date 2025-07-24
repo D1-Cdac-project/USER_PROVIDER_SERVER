@@ -9,6 +9,7 @@ const adminModel = require("../models/adminModel");
 const notificationModel = require("../models/notificationModel");
 const addressModel = require("../models/addressModel");
 const mandapModel = require("../models/mandapModel");
+const userModel = require("../models/userModel");
 
 exports.registerProvider = async (req, res, io) => {
   try {

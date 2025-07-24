@@ -170,18 +170,20 @@ exports.getPendingApprovalRequests = async (req, res) => {
 
 exports.handleApprovalRequest = async (req, res, io) => {
   try {
-    const { requestId, status } = req.body;
-    const approvalRequest = await approvalRequestModel.findById(requestId);
+    const { providerId, status } = req.body;
+    // Find the approval request by providerId and ensure it's pending
+    const approvalRequest = await approvalRequestModel.findOne({
+      providerId,
+      status: "pending",
+    });
     if (!approvalRequest) {
       return res
         .status(404)
-        .json(createErrorResult("Approval request not found"));
-    }
-
-    if (approvalRequest.status !== "pending") {
-      return res
-        .status(400)
-        .json(createErrorResult("Request already processed"));
+        .json(
+          createErrorResult(
+            "Pending approval request not found for this provider"
+          )
+        );
     }
 
     if (!["approved", "rejected"].includes(status)) {
@@ -192,7 +194,7 @@ exports.handleApprovalRequest = async (req, res, io) => {
     await approvalRequest.save();
 
     if (status === "approved") {
-      const provider = await providerModel.findById(approvalRequest.providerId);
+      const provider = await providerModel.findById(providerId);
       if (!provider) {
         return res.status(404).json(createErrorResult("Provider not found"));
       }
@@ -206,14 +208,11 @@ exports.handleApprovalRequest = async (req, res, io) => {
         message: "Your account has been approved by the BookMyMandap Team!",
       });
     } else {
-      io.to(approvalRequest.providerId.toString()).emit(
-        "approvalStatusUpdate",
-        {
-          status: "rejected",
-          message:
-            "Your account approval request was rejected by the BookMyMandap Team.",
-        }
-      );
+      io.to(providerId.toString()).emit("approvalStatusUpdate", {
+        status: "rejected",
+        message:
+          "Your account approval request was rejected by the BookMyMandap Team.",
+      });
     }
 
     return res
