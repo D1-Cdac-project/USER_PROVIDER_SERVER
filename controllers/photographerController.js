@@ -184,3 +184,20 @@ exports.getPhotographerById = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+exports.getPhotographerByMandapId = async (req, res) => {
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap || !mandap.isActive) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+
+    const photographers = await photographerModel.find({
+      mandapId,
+      isActive: true,
+    });
+    return res.status(200).json(createSuccessResult({ photographers }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
