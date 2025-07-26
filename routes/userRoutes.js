@@ -1,21 +1,21 @@
 const express = require("express");
-const {
-  updateProfile,
-  registerUser,
-  loginUser,
-  getUserDetails,
-  logoutUser,
-  getCatererById,
-  getAllCaterersByMandapId,
-  getReviewById,
-  getPhotographerByMandapId,
-  getAllPhotographers,
-  getRoomByMandapId,
-  getAllRooms,
-  getFeaturedMandaps,
-} = require("../controllers/userControllers");
+
 const { isUser } = require("../middlewares/verifyUser");
 const { upload } = require("../config/cloudinary");
+const {
+  registerUser,
+  loginUser,
+  logoutUser,
+  getUserDetails,
+  updateProfile,
+} = require("../controllers/userControllers");
+
+const {
+  addFavoriteMandap,
+  getAllFavoriteMandaps,
+  deleteFavoriteMandap,
+} = require("../controllers/favouriteMandapController");
+
 const {
   addBooking,
   getAllBookings,
@@ -23,22 +23,34 @@ const {
   deleteBooking,
   updateBooking,
 } = require("../controllers/bookingController");
-const {
-  addFavoriteMandap,
-  getAllFavoriteMandaps,
-  deleteFavoriteMandap,
-} = require("../controllers/favouriteMandapController");
-const {
-  addReview,
-  updateReviewById,
-  deleteReviewById,
-} = require("../controllers/reviewController");
+
 const {
   getAllMandaps,
   searchMandap,
   getMandapByFilter,
   getMandapByID,
 } = require("../controllers/mandapControllers");
+
+const {
+  getCatererById,
+  getAllCaterersByMandapId,
+} = require("../controllers/catererController");
+
+const {
+  getPhotographerByMandapId,
+  getAllPhotographers,
+} = require("../controllers/photographerController");
+const {
+  getRoomByMandapId,
+  getAllRooms,
+} = require("../controllers/roomController");
+const {
+  addReview,
+  getReviewById,
+  getReviewByMandapId,
+  updateReviewById,
+  deleteReviewById,
+} = require("../controllers/reviewController");
 
 const router = express.Router();
 
@@ -78,6 +90,7 @@ router.get("/rooms", getAllRooms);
 
 router.post("/add-review", isUser, addReview);
 router.get("/review/:reviewId", isUser, getReviewById);
+router.get("/reviews/:mandapId", getReviewByMandapId);
 router.put("/update-review/:reviewId", isUser, updateReviewById);
 router.delete("/delete-review/:reviewId", isUser, deleteReviewById);
 
