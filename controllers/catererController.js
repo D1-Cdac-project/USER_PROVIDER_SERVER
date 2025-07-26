@@ -238,3 +238,18 @@ exports.getCatererById = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+exports.getAllCaterersByMandapId = async (req, res) => {
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap || !mandap.isActive) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+
+    const caterers = await catererModel.find({ mandapId, isActive: true });
+    return res.status(200).json(createSuccessResult({ caterers }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
