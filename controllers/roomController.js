@@ -66,7 +66,6 @@ exports.updateRoom = async (req, res) => {
   }
 };
 
-
 exports.deleteRoom = async (req, res) => {
   if (!req.provider) {
     return res.status(400).json(createErrorResult("Invalid Request"));
@@ -145,6 +144,29 @@ exports.getRoomById = async (req, res) => {
       .json(
         createSuccessResult({ room, message: "Room fetched successfully" })
       );
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+exports.getAllRooms = async (req, res) => {
+  try {
+    const rooms = await roomModel.find({});
+    return res.status(200).json(createSuccessResult({ rooms }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+exports.getRoomByMandapId = async (req, res) => {
+  try {
+    const { mandapId } = req.params;
+    const mandap = await mandapModel.findById(mandapId);
+    if (!mandap || !mandap.isActive) {
+      return res.status(404).json(createErrorResult("Mandap not found"));
+    }
+
+    const rooms = await roomModel.find({ mandapId });
+    return res.status(200).json(createSuccessResult({ rooms }));
   } catch (error) {
     return res.status(500).json(createErrorResult(error.message));
   }
