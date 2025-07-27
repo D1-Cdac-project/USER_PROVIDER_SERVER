@@ -44,10 +44,6 @@ const addressSchema = new mongoose.Schema({
     trim: true,
     match: [/^\d{6}$/, "Please enter a valid 6-digit pin code"],
   },
-  fullAddress: {
-    type: String,
-    trim: true,
-  },
 });
 
 module.exports = mongoose.model("Address", addressSchema);
