@@ -49,12 +49,12 @@ const roomSchema = new mongoose.Schema(
     NonAcRoom: {
       noOfRooms: {
         type: Number,
-        required: true,
+
         min: 0,
       },
       pricePerNight: {
         type: Number,
-        required: true,
+
         min: 0,
       },
       amenities: [
@@ -79,6 +79,10 @@ const roomSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }
