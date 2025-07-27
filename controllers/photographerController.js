@@ -1,14 +1,26 @@
+const mongoose = require("mongoose");
+
 const { cloudinary } = require("../config/cloudinary");
 const { createErrorResult, createSuccessResult } = require("../config/result");
+
 const mandapModel = require("../models/mandapModel");
 const photographerModel = require("../models/photographerModel");
 
+// Adds a new photographer with a single mandapId and Cloudinary image upload
 exports.addPhotographer = async (req, res) => {
   if (!req.provider) {
-    return res.status(400).json(createErrorResult("Invalid Request"));
+    return res
+      .status(400)
+      .json(createErrorResult("Invalid Request: Provider not authenticated"));
   }
   try {
-    const { mandapId, photographerName, photographyTypes } = req.body;
+    const { mandapId, photographerName, photographyTypes, printOption } =
+      req.body;
+
+    // Validate mandapId
+    if (!mongoose.Types.ObjectId.isValid(mandapId)) {
+      return res.status(400).json(createErrorResult("Invalid mandapId format"));
+    }
 
     const mandap = await mandapModel.findOne({
       _id: mandapId,
@@ -21,18 +33,101 @@ exports.addPhotographer = async (req, res) => {
         .json(createErrorResult("Mandap not found or unauthorized"));
     }
 
+    // Parse photographyTypes
+    let parsedPhotographyTypes;
+    if (typeof photographyTypes === "string") {
+      try {
+        parsedPhotographyTypes = JSON.parse(photographyTypes);
+      } catch (e) {
+        return res
+          .status(400)
+          .json(
+            createErrorResult(
+              "Invalid JSON format for photographyTypes: " + e.message
+            )
+          );
+      }
+    } else {
+      parsedPhotographyTypes = photographyTypes;
+    }
+
+    // Validate photographyTypes
+    if (
+      !Array.isArray(parsedPhotographyTypes) ||
+      parsedPhotographyTypes.length === 0
+    ) {
+      return res
+        .status(400)
+        .json(createErrorResult("photographyTypes must be a non-empty array"));
+    }
+    if (
+      !parsedPhotographyTypes.every((type) => type.phtype && type.pricePerEvent)
+    ) {
+      return res
+        .status(400)
+        .json(
+          createErrorResult(
+            "Each photographyType must have phtype and pricePerEvent"
+          )
+        );
+    }
+
+    // Parse printOption
+    let parsedPrintOption = [];
+    if (printOption) {
+      if (typeof printOption === "string") {
+        try {
+          parsedPrintOption = JSON.parse(printOption);
+        } catch (e) {
+          return res
+            .status(400)
+            .json(
+              createErrorResult(
+                "Invalid JSON format for printOption: " + e.message
+              )
+            );
+        }
+      } else {
+        parsedPrintOption = printOption;
+      }
+      if (!Array.isArray(parsedPrintOption)) {
+        return res
+          .status(400)
+          .json(createErrorResult("printOption must be an array"));
+      }
+      if (
+        parsedPrintOption.length > 0 &&
+        !parsedPrintOption.every(
+          (opt) => opt.printType || opt.printDesc || opt.printPrice
+        )
+      ) {
+        return res
+          .status(400)
+          .json(
+            createErrorResult(
+              "Each printOption must have at least one of printType, printDesc, or printPrice"
+            )
+          );
+      }
+    }
+
+    // Handle image upload for sampleWork
     let sampleWork = [];
     if (req.files && req.files.length > 0) {
       sampleWork = req.files.map((file) => file.path);
     }
 
+    // Assign sampleWork to each photographyType
+    const updatedPhotographyTypes = parsedPhotographyTypes.map((type) => ({
+      ...type,
+      sampleWork: sampleWork.length > 0 ? sampleWork : type.sampleWork || [],
+    }));
+
     await photographerModel.create({
       mandapId,
       photographerName,
-      photographyTypes: photographyTypes.map((type) => ({
-        ...type,
-        sampleWork,
-      })),
+      photographyTypes: updatedPhotographyTypes,
+      printOption: parsedPrintOption,
     });
 
     return res
@@ -41,35 +136,137 @@ exports.addPhotographer = async (req, res) => {
         createSuccessResult({ message: "Photographer added successfully" })
       );
   } catch (error) {
+    console.error("Error adding photographer:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Updates a photographer with Cloudinary image handling
 exports.updatePhotographer = async (req, res) => {
   if (!req.provider) {
-    return res.status(400).json(createErrorResult("Invalid Request"));
+    return res
+      .status(400)
+      .json(createErrorResult("Invalid Request: Provider not authenticated"));
   }
   try {
     const { photographerId } = req.params;
-    const { photographerName, photographyTypes } = req.body;
+    const { mandapId, photographerName, photographyTypes, printOption } =
+      req.body;
 
     const photographer = await photographerModel.findById(photographerId);
     if (!photographer) {
       return res.status(404).json(createErrorResult("Photographer not found"));
     }
 
-    const mandap = await mandapModel.findOne({
-      _id: photographer.mandapId,
-      providerId: req.provider._id,
-    });
-    if (!mandap) {
-      return res.status(403).json(createErrorResult("Unauthorized"));
+    // Validate mandapId if provided
+    let updatedMandapId = photographer.mandapId;
+    if (mandapId) {
+      if (!mongoose.Types.ObjectId.isValid(mandapId)) {
+        return res
+          .status(400)
+          .json(createErrorResult("Invalid mandapId format"));
+      }
+      const mandap = await mandapModel.findOne({
+        _id: mandapId,
+        providerId: req.provider._id,
+        isActive: true,
+      });
+      if (!mandap) {
+        return res
+          .status(404)
+          .json(createErrorResult("Mandap not found or unauthorized"));
+      }
+      updatedMandapId = mandapId;
     }
 
+    // Parse photographyTypes
+    let parsedPhotographyTypes = photographer.photographyTypes;
+    if (photographyTypes) {
+      if (typeof photographyTypes === "string") {
+        try {
+          parsedPhotographyTypes = JSON.parse(photographyTypes);
+        } catch (e) {
+          return res
+            .status(400)
+            .json(
+              createErrorResult(
+                "Invalid JSON format for photographyTypes: " + e.message
+              )
+            );
+        }
+      } else {
+        parsedPhotographyTypes = photographyTypes;
+      }
+      if (
+        !Array.isArray(parsedPhotographyTypes) ||
+        parsedPhotographyTypes.length === 0
+      ) {
+        return res
+          .status(400)
+          .json(
+            createErrorResult("photographyTypes must be a non-empty array")
+          );
+      }
+      if (
+        !parsedPhotographyTypes.every(
+          (type) => type.phtype && type.pricePerEvent
+        )
+      ) {
+        return res
+          .status(400)
+          .json(
+            createErrorResult(
+              "Each photographyType must have phtype and pricePerEvent"
+            )
+          );
+      }
+    }
+
+    // Parse printOption
+    let parsedPrintOption = photographer.printOption;
+    if (printOption) {
+      if (typeof printOption === "string") {
+        try {
+          parsedPrintOption = JSON.parse(printOption);
+        } catch (e) {
+          return res
+            .status(400)
+            .json(
+              createErrorResult(
+                "Invalid JSON format for printOption: " + e.message
+              )
+            );
+        }
+      } else {
+        parsedPrintOption = printOption;
+      }
+      if (!Array.isArray(parsedPrintOption)) {
+        return res
+          .status(400)
+          .json(createErrorResult("printOption must be an array"));
+      }
+      if (
+        parsedPrintOption.length > 0 &&
+        !parsedPrintOption.every(
+          (opt) => opt.printType || opt.printDesc || opt.printPrice
+        )
+      ) {
+        return res
+          .status(400)
+          .json(
+            createErrorResult(
+              "Each printOption must have at least one of printType, printDesc, or printPrice"
+            )
+          );
+      }
+    }
+
+    // Handle image update for sampleWork
     let sampleWork = photographer.photographyTypes.flatMap(
       (type) => type.sampleWork
     );
     if (req.files && req.files.length > 0) {
+      // Delete existing images from Cloudinary
       for (const imageUrl of sampleWork) {
         const publicId = imageUrl.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
@@ -77,14 +274,19 @@ exports.updatePhotographer = async (req, res) => {
       sampleWork = req.files.map((file) => file.path);
     }
 
+    // Assign sampleWork to each photographyType
+    const updatedPhotographyTypes = parsedPhotographyTypes.map((type) => ({
+      ...type,
+      sampleWork: sampleWork.length > 0 ? sampleWork : type.sampleWork || [],
+    }));
+
     await photographerModel.findByIdAndUpdate(
       photographerId,
       {
-        photographerName,
-        photographyTypes: photographyTypes.map((type) => ({
-          ...type,
-          sampleWork,
-        })),
+        mandapId: updatedMandapId,
+        photographerName: photographerName || photographer.photographerName,
+        photographyTypes: updatedPhotographyTypes,
+        printOption: parsedPrintOption,
       },
       { new: true, runValidators: true }
     );
@@ -95,13 +297,17 @@ exports.updatePhotographer = async (req, res) => {
         createSuccessResult({ message: "Photographer updated successfully" })
       );
   } catch (error) {
+    console.error("Error updating photographer:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Soft deletes a photographer with Cloudinary image cleanup
 exports.deletePhotographer = async (req, res) => {
   if (!req.provider) {
-    return res.status(400).json(createErrorResult("Invalid Request"));
+    return res
+      .status(400)
+      .json(createErrorResult("Invalid Request: Provider not authenticated"));
   }
   try {
     const { photographerId } = req.params;
@@ -115,9 +321,14 @@ exports.deletePhotographer = async (req, res) => {
       providerId: req.provider._id,
     });
     if (!mandap) {
-      return res.status(403).json(createErrorResult("Unauthorized"));
+      return res
+        .status(403)
+        .json(
+          createErrorResult("Unauthorized: Provider does not own this mandap")
+        );
     }
 
+    // Delete images from Cloudinary
     for (const type of photographer.photographyTypes) {
       for (const imageUrl of type.sampleWork) {
         const publicId = imageUrl.split("/").pop().split(".")[0];
@@ -125,10 +336,9 @@ exports.deletePhotographer = async (req, res) => {
       }
     }
 
-    await photographerModel.updateOne(
-      { _id: photographerId },
-      { $set: { isActive: false } }
-    );
+    await photographerModel.findByIdAndUpdate(photographerId, {
+      isActive: false,
+    });
 
     return res
       .status(200)
@@ -136,29 +346,31 @@ exports.deletePhotographer = async (req, res) => {
         createSuccessResult({ message: "Photographer deleted successfully" })
       );
   } catch (error) {
+    console.error("Error deleting photographer:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Fetches all active photographers for provider’s mandaps
 exports.getAllPhotographers = async (req, res) => {
+  if (!req.provider) {
+    return res
+      .status(400)
+      .json(createErrorResult("Invalid Request: Provider not authenticated"));
+  }
   try {
-    const { mandapId } = req.params;
-    const mandap = await mandapModel.findById(mandapId);
-    if (!mandap) {
-      return res.status(404).json(createErrorResult("Mandap not found"));
+    const mandaps = await mandapModel
+      .find({ providerId: req.provider._id, isActive: true })
+      .distinct("_id");
+    if (!mandaps.length) {
+      return res.status(404).json(createErrorResult("No mandaps found"));
     }
-    if (!mandap.isActive) {
-      return res.status(400).json(createErrorResult("Mandap is not active"));
-    }
-
-    const photographers = await photographerModel.find({
-      mandapId,
-      isActive: true,
-    });
-    if (photographers.length === 0) {
+    const photographers = await photographerModel
+      .find({ mandapId: { $in: mandaps }, isActive: true })
+      .populate("mandapId");
+    if (!photographers.length) {
       return res.status(404).json(createErrorResult("No photographers found"));
     }
-
     return res.status(200).json(
       createSuccessResult({
         message: "Photographers fetched successfully",
@@ -166,38 +378,62 @@ exports.getAllPhotographers = async (req, res) => {
       })
     );
   } catch (error) {
+    console.error("Error fetching photographers:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Fetches a single photographer by ID
 exports.getPhotographerById = async (req, res) => {
   try {
     const { photographerId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(photographerId)) {
+      return res.status(400).json(createErrorResult("Invalid photographerId"));
+    }
     const photographer = await photographerModel
       .findById(photographerId)
       .populate("mandapId");
     if (!photographer || !photographer.isActive) {
-      return res.status(404).json(createErrorResult("Photographer not found"));
+      return res
+        .status(404)
+        .json(createErrorResult("Photographer not found or inactive"));
     }
-    return res.status(200).json(createSuccessResult({ photographer }));
+    return res.status(200).json(
+      createSuccessResult({
+        photographer,
+        message: "Photographer fetched successfully",
+      })
+    );
   } catch (error) {
+    console.error("Error fetching photographer by ID:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+// Fetches all active photographers by mandap ID
 exports.getPhotographerByMandapId = async (req, res) => {
   try {
     const { mandapId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(mandapId)) {
+      return res.status(400).json(createErrorResult("Invalid mandapId"));
+    }
     const mandap = await mandapModel.findById(mandapId);
     if (!mandap || !mandap.isActive) {
-      return res.status(404).json(createErrorResult("Mandap not found"));
+      return res
+        .status(404)
+        .json(createErrorResult("Mandap not found or inactive"));
     }
-
-    const photographers = await photographerModel.find({
-      mandapId,
-      isActive: true,
-    });
-    return res.status(200).json(createSuccessResult({ photographers }));
+    const photographers = await photographerModel
+      .find({ mandapId, isActive: true })
+      .populate("mandapId");
+    return res.status(200).json(
+      createSuccessResult({
+        photographers,
+        message: "Photographers fetched successfully",
+      })
+    );
   } catch (error) {
+    console.error("Error fetching photographers by mandap ID:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };

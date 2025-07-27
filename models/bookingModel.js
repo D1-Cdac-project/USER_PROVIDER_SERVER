@@ -4,45 +4,41 @@ const bookingSchema = new mongoose.Schema(
   {
     mandapId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "mandaps",
+      ref: "Mandaps",
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "users",
+      ref: "Users",
     },
     availableDates: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "mandaps",
+        type: Date,
+        required: true,
       },
     ],
     photographer: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "photographers",
+        ref: "Photographers",
       },
     ],
     caterer: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "caterers",
+        ref: "Caterers",
       },
     ],
     room: {
-      acRoomCount: {
-        type: Number,
-        min: 0,
-        default: 0,
-      },
-      nonAcRoomCount: {
-        type: Number,
-        min: 0,
-        default: 0,
-      },
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Rooms",
     },
     isActive: {
       type: Boolean,
       default: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }

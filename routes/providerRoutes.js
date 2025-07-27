@@ -4,9 +4,8 @@ const {
   registerProvider,
   loginProvider,
   logoutProvider,
-  getProvider,
   updateProvider,
-  getAllBookings,
+  getProviderProfile,
 } = require("../controllers/providerControllers");
 const { upload } = require("../config/cloudinary");
 const {
@@ -20,6 +19,7 @@ const {
   updatePhotographer,
   getAllPhotographers,
   deletePhotographer,
+  getPhotographerById,
 } = require("../controllers/photographerController");
 const {
   deleteCaterer,
@@ -27,6 +27,7 @@ const {
   addCaterer,
   getAllCaterer,
   getCatererById,
+  getAllCaterersByMandapId,
 } = require("../controllers/catererController");
 const {
   addRoom,
@@ -35,20 +36,25 @@ const {
   getAllRooms,
   getRoomById,
 } = require("../controllers/roomController");
+const {
+  getAllBookingsByProvider,
+} = require("../controllers/bookingController");
+const { getReviewByMandapId } = require("../controllers/reviewController");
 
 const router = express.Router();
 
 router.post("/signup", (req, res) => registerProvider(req, res, req.io));
 router.post("/login", (req, res) => loginProvider(req, res, req.io));
 router.post("/logout", logoutProvider);
-router.get("/profile", isProvider, getProvider);
-router.get("/bookings", isProvider, getAllBookings);
+router.get("/profile", isProvider, getProviderProfile);
+router.get("/bookings", isProvider, getAllBookingsByProvider);
 router.put(
   "/update-profile",
   isProvider,
   upload.single("providerLogo"),
   updateProvider
 );
+
 router.post(
   "/mandap",
   isProvider,
@@ -63,6 +69,7 @@ router.put(
   updateMandap
 );
 router.delete("/delete-mandap/:mandapId", isProvider, deleteMandap);
+
 router.post(
   "/add-photographer",
   isProvider,
@@ -81,6 +88,12 @@ router.delete(
   isProvider,
   deletePhotographer
 );
+
+router.get(
+  "/get-photographer/:photographerId",
+  isProvider,
+  getPhotographerById
+);
 // caterer
 router.post(
   "/add-caterer",
@@ -98,11 +111,22 @@ router.put(
 router.delete("/delete-caterer/:catererId", isProvider, deleteCaterer);
 router.get("/get-all-caterers", isProvider, getAllCaterer);
 router.get("/get-caterer/:catererId", isProvider, getCatererById);
+router.get("/get-all-caterer/:mandapId", isProvider, getAllCaterersByMandapId);
 
-router.post("/add-room", isProvider, addRoom);
-router.put("/update-room/:roomId", isProvider, updateRoom);
+router.post("/add-room", upload.any(), isProvider, addRoom);
+router.put(
+  "/update-room/:roomId",
+  upload.fields([
+    { name: "acRoomImages", maxCount: 10 },
+    { name: "nonAcRoomImages", maxCount: 10 },
+  ]),
+  isProvider,
+  updateRoom
+);
 router.delete("/delete-room/:roomId", isProvider, deleteRoom);
 router.get("/get-all-rooms", isProvider, getAllRooms);
 router.get("/get-room/:roomId", isProvider, getRoomById);
+
+router.get("/get-review/:mandapId", isProvider, getReviewByMandapId);
 
 module.exports = router;
