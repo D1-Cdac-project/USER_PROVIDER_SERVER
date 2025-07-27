@@ -1,7 +1,9 @@
 const { createErrorResult, createSuccessResult } = require("../config/result");
+
 const mandapModel = require("../models/mandapModel");
 const reviewModel = require("../models/reviewModel");
 
+//adding review to the mandap
 exports.addReview = async (req, res) => {
   try {
     if (!req.user)
@@ -27,6 +29,7 @@ exports.addReview = async (req, res) => {
   }
 };
 
+// updating review as per the reviewId
 exports.updateReviewById = async (req, res) => {
   try {
     if (!req.user)
@@ -57,6 +60,7 @@ exports.updateReviewById = async (req, res) => {
   }
 };
 
+// deleting the reveiw by id
 exports.deleteReviewById = async (req, res) => {
   try {
     if (!req.user)
@@ -79,10 +83,14 @@ exports.deleteReviewById = async (req, res) => {
   }
 };
 
+// getting all reviews by mandapId
 exports.getReviewByMandapId = async (req, res) => {
   try {
     const { mandapId } = req.params;
+
+    // Temporarily skip validation for testing
     const mandap = await mandapModel.findById(mandapId);
+
     if (!mandap || !mandap.isActive) {
       return res.status(404).json(createErrorResult("Mandap not found"));
     }
@@ -96,6 +104,7 @@ exports.getReviewByMandapId = async (req, res) => {
   }
 };
 
+// getting specific review by id
 exports.getReviewById = async (req, res) => {
   try {
     const { reviewId } = req.params;
