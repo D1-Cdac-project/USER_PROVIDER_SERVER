@@ -6,10 +6,10 @@ const {
   sendApprovalEmail,
 } = require("../config/mailer");
 const adminModel = require("../models/adminModel");
-const userModel = require("../models/userModel");
-const providerModel = require("../models/providerModel");
 const approvalRequestModel = require("../models/approvalRequestModel");
 const notificationModel = require("../models/notificationModel");
+const userModel = require("../models/userModel");
+const providerModel = require("../models/providerModel");
 
 // Registers a new admin
 exports.registerAdmin = async (req, res) => {
