@@ -1,9 +1,5 @@
 const bcrypt = require("bcrypt");
-const {
-  createResult,
-  createSuccessResult,
-  createErrorResult,
-} = require("../config/result");
+const { createSuccessResult, createErrorResult } = require("../config/result");
 const generateToken = require("../config/generateToken");
 const {
   sendRegistrationEmail,
@@ -15,6 +11,7 @@ const providerModel = require("../models/providerModel");
 const approvalRequestModel = require("../models/approvalRequestModel");
 const notificationModel = require("../models/notificationModel");
 
+// Registers a new admin
 exports.registerAdmin = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -25,6 +22,7 @@ exports.registerAdmin = async (req, res) => {
   }
 };
 
+// Logs in an admin with socket notification
 exports.loginAdmin = async (req, res, io) => {
   try {
     const { email, password } = req.body;
@@ -40,18 +38,17 @@ exports.loginAdmin = async (req, res, io) => {
         .status(404)
         .json(createErrorResult("Invalid email or password"));
     }
-
     io.to(adminExists._id.toString()).emit("adminLoginSuccess", {
       adminId: adminExists._id,
       message: "Admin login successful",
     });
-
     return generateToken(res, 200, adminExists, "admin");
   } catch (error) {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Logs out an admin
 exports.logoutAdmin = async (req, res) => {
   try {
     res.cookie("adminToken", null, {
@@ -66,6 +63,7 @@ exports.logoutAdmin = async (req, res) => {
   }
 };
 
+// Adds a new user with notifications
 exports.addUser = async (req, res, io) => {
   try {
     const { fullName, email, phoneNumber, password } = req.body;
@@ -73,39 +71,35 @@ exports.addUser = async (req, res, io) => {
     if (userExist) {
       return res.status(400).json(createErrorResult("User already exists"));
     }
-
     const user = await userModel.create({
       fullName,
       email,
       phoneNumber,
       password,
     });
-
     await sendRegistrationEmail(user.email, user.fullName, "user");
-
     const admins = await adminModel.find({});
-    const notificationPromises = admins.map(async (admin) => {
-      return notificationModel.create({
+    const notificationPromises = admins.map((admin) =>
+      notificationModel.create({
         recipientId: admin._id,
         type: "user_registration",
         message: `New user registered: ${user.fullName} (${user.email})`,
         relatedId: user._id,
         relatedModel: "Users",
-      });
-    });
+      })
+    );
     await Promise.all(notificationPromises);
-
     io.emit("newUserRegistration", {
       user: { _id: user._id, fullName: user.fullName, email: user.email },
       createdAt: new Date(),
     });
-
     return generateToken(res, 201, user, "user");
   } catch (error) {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Adds a new provider with notifications
 exports.addProvider = async (req, res, io) => {
   try {
     const { name, email, password, phoneNumber } = req.body;
@@ -113,29 +107,25 @@ exports.addProvider = async (req, res, io) => {
     if (providerExists) {
       return res.status(400).json(createErrorResult("Provider already exists"));
     }
-
     const provider = await providerModel.create({
       name,
       email,
       password,
       phoneNumber,
-      isAuthorized: true,
+      authorizationStatus: "approved",
     });
-
     await sendRegistrationEmail(provider.email, provider.name, "provider");
-
     const admins = await adminModel.find({});
-    const notificationPromises = admins.map(async (admin) => {
-      return notificationModel.create({
+    const notificationPromises = admins.map((admin) =>
+      notificationModel.create({
         recipientId: admin._id,
         type: "provider_registration",
         message: `New provider registered: ${provider.name} (${provider.email})`,
         relatedId: provider._id,
         relatedModel: "Providers",
-      });
-    });
+      })
+    );
     await Promise.all(notificationPromises);
-
     io.emit("newProviderRegistration", {
       provider: {
         _id: provider._id,
@@ -144,22 +134,18 @@ exports.addProvider = async (req, res, io) => {
       },
       createdAt: new Date(),
     });
-
     return generateToken(res, 201, provider, "provider");
   } catch (error) {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Fetches pending approval requests
 exports.getPendingApprovalRequests = async (req, res) => {
   try {
     const pendingRequests = await approvalRequestModel
       .find({ status: "pending" })
-      .populate({
-        path: "providerId",
-        select: "name email phoneNumber",
-      });
-
+      .populate("providerId", "name email phoneNumber");
     return res
       .status(200)
       .json(createSuccessResult({ requests: pendingRequests }));
@@ -168,10 +154,10 @@ exports.getPendingApprovalRequests = async (req, res) => {
   }
 };
 
+// Handles provider approval requests
 exports.handleApprovalRequest = async (req, res, io) => {
   try {
     const { providerId, status } = req.body;
-    // Find the approval request by providerId and ensure it's pending
     const approvalRequest = await approvalRequestModel.findOne({
       providerId,
       status: "pending",
@@ -185,36 +171,29 @@ exports.handleApprovalRequest = async (req, res, io) => {
           )
         );
     }
-
     if (!["approved", "rejected"].includes(status)) {
       return res.status(400).json(createErrorResult("Invalid status"));
     }
-
     approvalRequest.status = status;
     await approvalRequest.save();
-
+    const provider = await providerModel.findById(providerId);
+    if (!provider) {
+      return res.status(404).json(createErrorResult("Provider not found"));
+    }
+    provider.authorizationStatus = status;
+    await provider.save();
     if (status === "approved") {
-      const provider = await providerModel.findById(providerId);
-      if (!provider) {
-        return res.status(404).json(createErrorResult("Provider not found"));
-      }
-      provider.isAuthorized = true;
-      await provider.save();
-
       await sendApprovalEmail(provider.email, provider.name);
-
       io.to(provider._id.toString()).emit("approvalStatusUpdate", {
         status: "approved",
-        message: "Your account has been approved by the BookMyMandap Team!",
+        message: "Your account has been approved!",
       });
     } else {
       io.to(providerId.toString()).emit("approvalStatusUpdate", {
         status: "rejected",
-        message:
-          "Your account approval request was rejected by the BookMyMandap Team.",
+        message: "Your account approval request was rejected.",
       });
     }
-
     return res
       .status(200)
       .json(
@@ -225,23 +204,22 @@ exports.handleApprovalRequest = async (req, res, io) => {
   }
 };
 
+// Fetches all unread notifications for the authenticated admin
 exports.getAdminNotifications = async (req, res) => {
   try {
     const adminId = req.admin._id;
     const notifications = await notificationModel
-      .find({ recipientId: adminId })
-      .populate({
-        path: "relatedId",
-        select: "name email fullName",
-      })
+      .find({ recipientId: adminId, isRead: false })
+      .populate("relatedId", "name email fullName")
       .sort({ createdAt: -1 });
-
     return res.status(200).json(createSuccessResult({ notifications }));
   } catch (error) {
+    console.error("Error fetching unread notifications:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Marks a notification as read
 exports.markNotificationAsRead = async (req, res) => {
   try {
     const { notificationId } = req.body;
@@ -249,16 +227,13 @@ exports.markNotificationAsRead = async (req, res) => {
     if (!notification) {
       return res.status(404).json(createErrorResult("Notification not found"));
     }
-
     if (notification.recipientId.toString() !== req.admin._id.toString()) {
       return res
         .status(403)
         .json(createErrorResult("Unauthorized to modify this notification"));
     }
-
     notification.isRead = true;
     await notification.save();
-
     return res
       .status(200)
       .json(createSuccessResult({ message: "Notification marked as read" }));
@@ -267,6 +242,7 @@ exports.markNotificationAsRead = async (req, res) => {
   }
 };
 
+// Fetches all users
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await userModel.find({}).select("-password -__v");
@@ -276,6 +252,7 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+// Fetches all providers
 exports.getAllProviders = async (req, res) => {
   try {
     const providers = await providerModel.find({}).select("-password -__v");
@@ -285,11 +262,12 @@ exports.getAllProviders = async (req, res) => {
   }
 };
 
+// Searches users by query
 exports.searchUsers = async (req, res) => {
   try {
     const { query } = req.query;
-    validateInput({ query }, ["query"], "searchUsers", req);
-
+    if (!query)
+      return res.status(400).json(createErrorResult("Query is required"));
     const users = await userModel
       .find({
         $or: [
@@ -299,19 +277,19 @@ exports.searchUsers = async (req, res) => {
         ],
       })
       .select("-password -__v");
-
     return res.status(200).json(createSuccessResult({ users }));
   } catch (error) {
-    logError(error, "searchUsers", req);
+    console.error("Error searching users:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
 
+// Searches providers by query
 exports.searchProviders = async (req, res) => {
   try {
     const { query } = req.query;
-    validateInput({ query }, ["query"], "searchProviders", req);
-
+    if (!query)
+      return res.status(400).json(createErrorResult("Query is required"));
     const providers = await providerModel
       .find({
         $or: [
@@ -321,10 +299,9 @@ exports.searchProviders = async (req, res) => {
         ],
       })
       .select("-password -__v");
-
     return res.status(200).json(createSuccessResult({ providers }));
   } catch (error) {
-    logError(error, "searchProviders", req);
+    console.error("Error searching providers:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };

@@ -28,9 +28,10 @@ const providerSchema = new mongoose.Schema(
       match: [/^\d{10}$/, "Please enter a valid 10-digit phone number"],
       min: 10,
     },
-    isAuthorized: {
-      type: Boolean,
-      default: false,
+    authorizationStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
     },
     providerLogo: {
       type: String,
