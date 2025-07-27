@@ -15,15 +15,16 @@ const photographerSchema = new mongoose.Schema(
     },
     photographyTypes: [
       {
-        phtype:{
+        phtype: {
           type: String,
           enum: [
             "Candid",
             "Traditional",
             "Pre-wedding",
             "Post-wedding",
-            "Drone Photography"],
-            required: true,
+            "Drone Photography",
+          ],
+          required: true,
         },
         pricePerEvent: {
           type: Number,
@@ -37,10 +38,27 @@ const photographerSchema = new mongoose.Schema(
         ],
       },
     ],
+    printOption: [
+      {
+        printType: {
+          type: String,
+        },
+        printDesc: {
+          type: String,
+        },
+        printPrice: {
+          type: Number,
+        },
+      },
+    ],
     isActive: {
       type: Boolean,
       default: true,
-    }
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
