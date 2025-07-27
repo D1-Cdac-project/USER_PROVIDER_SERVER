@@ -54,6 +54,7 @@ exports.createMandap = async (req, res) => {
       outdoorFacilities,
       paymentOptions,
       isExternalCateringAllowed,
+      fullAddress,
     } = req.body;
 
     // Safely handle and trim fields
@@ -71,8 +72,9 @@ exports.createMandap = async (req, res) => {
       typeof venuePricing === "string"
         ? venuePricing.trim()
         : venuePricing?.toString() || "";
+    const trimmedFullAddress =
+      typeof fullAddress === "string" ? fullAddress.trim() : fullAddress;
 
-    // Check for missing or invalid required fields
     const requiredFields = {
       mandapName: trimmedMandapName,
       city: trimmedCity,
@@ -99,6 +101,7 @@ exports.createMandap = async (req, res) => {
         outdoorFacilities,
         paymentOptions,
         isExternalCateringAllowed,
+        fullAddress: trimmedFullAddress,
       };
       const omittedOptionalFields = Object.entries(optionalFields)
         .filter(([key, value]) => !value)
@@ -114,14 +117,12 @@ exports.createMandap = async (req, res) => {
       return res.status(400).json(createErrorResult(errorMessage));
     }
 
-    // Parse FormData inputs
     const parsedAvailableDates = parseArrayOrString(availableDates);
     const parsedVenueType = trimmedVenueType;
     const parsedAmenities = parseArrayOrString(amenities);
     const parsedOutdoorFacilities = parseArrayOrString(outdoorFacilities);
     const parsedPaymentOptions = parseArrayOrString(paymentOptions);
 
-    // Validate date formats
     if (
       parsedAvailableDates.length &&
       !parsedAvailableDates.every((date) => !isNaN(new Date(date).getTime()))
@@ -131,7 +132,6 @@ exports.createMandap = async (req, res) => {
         .json(createErrorResult("Invalid date format in availableDates"));
     }
 
-    // Validate numeric fields
     const numericVenuePricing = Number(trimmedVenuePricing);
     if (isNaN(numericVenuePricing)) {
       return res
@@ -160,6 +160,7 @@ exports.createMandap = async (req, res) => {
       state: trimmedState,
       city: trimmedCity,
       pinCode: trimmedPinCode,
+      fullAddress: trimmedFullAddress,
     });
 
     // Create mandap document
@@ -273,6 +274,7 @@ exports.updateMandap = async (req, res) => {
       outdoorFacilities,
       paymentOptions,
       isExternalCateringAllowed,
+      fullAddress, // Added fullAddress
     } = req.body;
 
     // Parse FormData inputs
@@ -306,7 +308,7 @@ exports.updateMandap = async (req, res) => {
 
     // Handle address updates
     let addressId = mandap.address;
-    const isAddressProvided = city || state || pinCode;
+    const isAddressProvided = city || state || pinCode || fullAddress; // Added fullAddress
     if (isAddressProvided) {
       if (!city || !state || !pinCode) {
         return res
@@ -320,11 +322,16 @@ exports.updateMandap = async (req, res) => {
       if (addressId) {
         await addressModel.findByIdAndUpdate(
           addressId,
-          { city, state, pinCode },
+          { city, state, pinCode, fullAddress }, // Added fullAddress
           { new: true, runValidators: true }
         );
       } else {
-        const newAddress = await addressModel.create({ city, state, pinCode });
+        const newAddress = await addressModel.create({
+          city,
+          state,
+          pinCode,
+          fullAddress, // Added fullAddress
+        });
         addressId = newAddress._id;
       }
     }
