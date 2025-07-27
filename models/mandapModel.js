@@ -11,7 +11,7 @@ const mandapSchema = new mongoose.Schema(
     },
     providerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "providers",
+      ref: "Providers",
       required: true,
     },
     availableDates: [
@@ -39,7 +39,6 @@ const mandapSchema = new mongoose.Schema(
     address: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Address",
-      required: true,
     },
     penaltyChargesPerHour: {
       type: Number,
@@ -48,7 +47,6 @@ const mandapSchema = new mongoose.Schema(
     cancellationPolicy: {
       type: String,
       enum: ["No Refund", "Partial Refund", "Full Refund"],
-      required: true,
     },
     venueImages: [
       {
@@ -62,7 +60,6 @@ const mandapSchema = new mongoose.Schema(
     venuePricing: {
       type: Number,
       default: 0,
-      required: true,
     },
     securityDeposit: {
       type: Number,
@@ -123,6 +120,10 @@ const mandapSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }

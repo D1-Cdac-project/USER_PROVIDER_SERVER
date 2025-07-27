@@ -2,13 +2,12 @@ const mongoose = require("mongoose");
 
 const catererSchema = new mongoose.Schema(
   {
-    mandapId: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "mandaps",
-        required: true,
-      },
-    ],
+    mandapId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Mandaps",
+      required: true,
+    },
+
     catererName: {
       type: String,
       required: true,
@@ -46,19 +45,20 @@ const catererSchema = new mongoose.Schema(
     },
     isCustomizable: {
       type: Boolean,
-      items: [
-        {
-          itemName: {
-            type: String,
-            required: true,
-          },
-          itemPrice: {
-            type: Number,
-            required: true,
-          },
-        },
-      ],
+      default: false,
     },
+    customizableItems: [
+      {
+        itemName: {
+          type: String,
+          required: true,
+        },
+        itemPrice: {
+          type: Number,
+          required: true,
+        },
+      },
+    ],
     hasTastingSession: {
       type: Boolean,
     },
@@ -66,7 +66,12 @@ const catererSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   { timestamps: true }
 );
+
 module.exports = mongoose.model("Caterers", catererSchema);

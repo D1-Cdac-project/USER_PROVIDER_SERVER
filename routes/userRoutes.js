@@ -1,44 +1,56 @@
 const express = require("express");
-const {
-  updateProfile,
-  registerUser,
-  loginUser,
-  getUserDetails,
-  logoutUser,
-  getCatererById,
-  getAllCaterersByMandapId,
-  getReviewById,
-  getPhotographerByMandapId,
-  getAllPhotographers,
-  getRoomByMandapId,
-  getAllRooms,
-  getFeaturedMandaps,
-} = require("../controllers/userControllers");
+
 const { isUser } = require("../middlewares/verifyUser");
 const { upload } = require("../config/cloudinary");
 const {
-  addBooking,
-  getAllBookings,
-  getBookingById,
-  deleteBooking,
-  updateBooking,
-} = require("../controllers/bookingController");
+  registerUser,
+  loginUser,
+  logoutUser,
+  getUserDetails,
+  updateProfile,
+} = require("../controllers/userControllers");
+
 const {
   addFavoriteMandap,
   getAllFavoriteMandaps,
   deleteFavoriteMandap,
 } = require("../controllers/favouriteMandapController");
+
 const {
-  addReview,
-  updateReviewById,
-  deleteReviewById,
-} = require("../controllers/reviewController");
+  addBooking,
+  getBookingById,
+  deleteBooking,
+  updateBooking,
+  getAllBookingsByUser,
+} = require("../controllers/bookingController");
+
 const {
   getAllMandaps,
   searchMandap,
   getMandapByFilter,
   getMandapByID,
 } = require("../controllers/mandapControllers");
+
+const {
+  getCatererById,
+  getAllCaterersByMandapId,
+} = require("../controllers/catererController");
+
+const {
+  getPhotographerByMandapId,
+  getAllPhotographers,
+} = require("../controllers/photographerController");
+const {
+  getRoomByMandapId,
+  getAllRooms,
+} = require("../controllers/roomController");
+const {
+  addReview,
+  getReviewById,
+  getReviewByMandapId,
+  updateReviewById,
+  deleteReviewById,
+} = require("../controllers/reviewController");
 
 const router = express.Router();
 
@@ -57,7 +69,7 @@ router.get("/favourite-mandaps", isUser, getAllFavoriteMandaps);
 router.delete("/favourite-mandap/:mandapId", isUser, deleteFavoriteMandap);
 
 router.post("/add-booking", isUser, addBooking);
-router.get("/bookings", isUser, getAllBookings);
+router.get("/bookings", isUser, getAllBookingsByUser);
 router.get("/booking/:id", isUser, getBookingById);
 router.delete("/delete/:id", isUser, deleteBooking);
 router.put("/update/:id", isUser, updateBooking);
@@ -78,6 +90,7 @@ router.get("/rooms", getAllRooms);
 
 router.post("/add-review", isUser, addReview);
 router.get("/review/:reviewId", isUser, getReviewById);
+router.get("/reviews/:mandapId", getReviewByMandapId);
 router.put("/update-review/:reviewId", isUser, updateReviewById);
 router.delete("/delete-review/:reviewId", isUser, deleteReviewById);
 
