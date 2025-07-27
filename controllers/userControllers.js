@@ -1,14 +1,16 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const { createSuccessResult, createErrorResult } = require("../config/result");
+const mongoose = require("mongoose");
+
 const generateToken = require("../config/generateToken");
+const { createSuccessResult, createErrorResult } = require("../config/result");
 const { sendRegistrationEmail } = require("../config/mailer");
-const userModel = require("../models/userModel");
+
 const adminModel = require("../models/adminModel");
 const notificationModel = require("../models/notificationModel");
-const mandapModel = require("../models/mandapModel");
-const reviewModel = require("../models/reviewModel");
+const userModel = require("../models/userModel");
 
+//registration of new user
 exports.registerUser = async (req, res, io) => {
   try {
     const { fullName, email, phoneNumber, password } = req.body;
@@ -49,6 +51,7 @@ exports.registerUser = async (req, res, io) => {
   }
 };
 
+// function for login
 exports.loginUser = async (req, res, io) => {
   try {
     const { email, password } = req.body;
@@ -77,6 +80,7 @@ exports.loginUser = async (req, res, io) => {
   }
 };
 
+//logout
 exports.logoutUser = async (req, res) => {
   try {
     res.cookie("userToken", null, {
@@ -91,6 +95,7 @@ exports.logoutUser = async (req, res) => {
   }
 };
 
+// get authenticated user details
 exports.getUserDetails = async (req, res) => {
   try {
     if (!req.user)
@@ -103,6 +108,7 @@ exports.getUserDetails = async (req, res) => {
   }
 };
 
+// update authenticate user
 exports.updateProfile = async (req, res) => {
   try {
     const { fullName, email, phoneNumber, password, address } = req.body;
@@ -111,10 +117,26 @@ exports.updateProfile = async (req, res) => {
     if (email) update.email = email;
     if (phoneNumber) update.phoneNumber = phoneNumber;
     if (address) {
-      if (!mongoose.isValidObjectId(address)) {
-        return res.status(400).json(createErrorResult("Invalid address ID"));
+      let addressDoc;
+      if (
+        typeof address === "object" &&
+        address.state &&
+        address.city &&
+        address.pinCode
+      ) {
+        // Create or find an address
+        addressDoc = await mongoose.model("Address").findOne(address);
+        if (!addressDoc) {
+          addressDoc = await mongoose.model("Address").create(address);
+        }
+        update.address = addressDoc._id;
+      } else if (mongoose.isValidObjectId(address)) {
+        update.address = address; // Use the provided ObjectId
+      } else {
+        return res
+          .status(400)
+          .json(createErrorResult("Invalid address ID or format"));
       }
-      update.address = address;
     }
     if (password) {
       update.password = await bcrypt.hash(password, 10);
