@@ -100,7 +100,10 @@ exports.getUserDetails = async (req, res) => {
   try {
     if (!req.user)
       return res.status(400).json(createErrorResult("Invalid Request"));
-    const user = await userModel.findById(req.user._id).select("-password");
+    const user = await userModel
+      .findById(req.user._id)
+      .select("-password")
+      .populate("address");
     if (!user) return res.status(404).json(createErrorResult("No user found"));
     return res.status(200).json(createSuccessResult({ user }));
   } catch (error) {
@@ -127,11 +130,14 @@ exports.updateProfile = async (req, res) => {
         // Create or find an address
         addressDoc = await mongoose.model("Address").findOne(address);
         if (!addressDoc) {
-          addressDoc = await mongoose.model("Address").create(address);
+          addressDoc = await mongoose.model("Address").create({
+            ...address,
+            fullAddress: address.fullAddress || "",
+          });
         }
         update.address = addressDoc._id;
       } else if (mongoose.isValidObjectId(address)) {
-        update.address = address; // Use the provided ObjectId
+        update.address = address;
       } else {
         return res
           .status(400)
