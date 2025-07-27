@@ -18,10 +18,10 @@ const {
 
 const {
   addBooking,
-  getAllBookings,
   getBookingById,
   deleteBooking,
   updateBooking,
+  getAllBookingsByUser,
 } = require("../controllers/bookingController");
 
 const {
@@ -69,7 +69,7 @@ router.get("/favourite-mandaps", isUser, getAllFavoriteMandaps);
 router.delete("/favourite-mandap/:mandapId", isUser, deleteFavoriteMandap);
 
 router.post("/add-booking", isUser, addBooking);
-router.get("/bookings", isUser, getAllBookings);
+router.get("/bookings", isUser, getAllBookingsByUser);
 router.get("/booking/:id", isUser, getBookingById);
 router.delete("/delete/:id", isUser, deleteBooking);
 router.put("/update/:id", isUser, updateBooking);
