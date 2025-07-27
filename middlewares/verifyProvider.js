@@ -17,11 +17,17 @@ exports.isProvider = async (req, res, next) => {
         .status(404)
         .json({ success: false, message: "Provider not found" });
     }
-    if (!provider.isAuthorized) {
+    if (provider.authorizationStatus == "rejected") {
+      return res
+        .status(403)
+        .json({ success: false, message: "Admin Rejected your approval" });
+    }
+    if (provider.authorizationStatus == "pending") {
       return res
         .status(403)
         .json({ success: false, message: "Provider not authorized" });
     }
+
     req.provider = provider;
     next();
   } catch (error) {
