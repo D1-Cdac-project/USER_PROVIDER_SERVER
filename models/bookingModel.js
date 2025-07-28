@@ -10,7 +10,7 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
     },
-    availableDates: [
+    orderDates: [
       {
         type: Date,
         required: true,
@@ -31,6 +31,17 @@ const bookingSchema = new mongoose.Schema(
     room: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Rooms",
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+    },
+    amountPaid: {
+      type: Number,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["Partial", "Completed", "Cancelled"],
     },
     isActive: {
       type: Boolean,
