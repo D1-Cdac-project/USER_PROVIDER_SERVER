@@ -23,6 +23,7 @@ const {
   deleteBooking,
   updateBooking,
   getAllBookingsByUser,
+  completePayment,
 } = require("../controllers/bookingController");
 
 const {
@@ -55,7 +56,7 @@ const {
 
 const router = express.Router();
 
-// user api's 
+//user profile
 router.post("/signup", (req, res) => registerUser(req, res, req.io));
 router.post("/login", (req, res) => loginUser(req, res, req.io));
 router.post("/logout", logoutUser);
@@ -73,32 +74,33 @@ router.post("/add-favorite-mandap", isUser, addFavoriteMandap);
 router.get("/favourite-mandaps", isUser, getAllFavoriteMandaps);
 router.delete("/favourite-mandap/:mandapId", isUser, deleteFavoriteMandap);
 
-// booking  api's 
-router.post("/add-booking", isUser, addBooking);
+//bookings
 router.get("/bookings", isUser, getAllBookingsByUser);
 router.get("/booking/:id", isUser, getBookingById);
+router.post("/add-booking", isUser, addBooking);
 router.delete("/delete/:id", isUser, deleteBooking);
 router.put("/update/:id", isUser, updateBooking);
+router.post("/complete-payment/:id", isUser, completePayment);
 
-// mandap api's 
+//mandaps
 router.get("/mandaps", getAllMandaps);
 router.get("/search-mandap", searchMandap);
 router.post("/filter-mandap", getMandapByFilter);
 router.get("/mandap/:mandapId", getMandapByID);
 
-//caterer api's
+// caterer
 router.get("/caterer/:catererId", getCatererById);
 router.get("/caterers/:mandapId", getAllCaterersByMandapId);
 
-// photographer api's 
+// photographer
 router.get("/photographers/:mandapId", getPhotographerByMandapId);
 router.get("/photographers", getAllPhotographers);
 
-//rooms api's
+// rooms
 router.get("/rooms/:mandapId", getRoomByMandapId);
 router.get("/rooms", getAllRooms);
 
-//review api's
+//reviews
 router.post("/add-review", isUser, addReview);
 router.get("/review/:reviewId", isUser, getReviewById);
 router.get("/reviews/:mandapId", getReviewByMandapId);

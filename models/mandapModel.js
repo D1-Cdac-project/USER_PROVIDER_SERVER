@@ -9,6 +9,11 @@ const mandapSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    mandapDesc: {
+      type: String,
+      trim: true,
+      required: true,
+    },
     providerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Providers",
@@ -113,6 +118,10 @@ const mandapSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    advancePayment: {
+      type: Number,
+      default: 0,
+    },
     isExternalCateringAllowed: {
       type: Boolean,
       default: false,

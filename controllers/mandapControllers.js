@@ -39,6 +39,7 @@ exports.createMandap = async (req, res) => {
 
     const {
       mandapName,
+      mandapDesc,
       city,
       state,
       pinCode,
@@ -55,11 +56,13 @@ exports.createMandap = async (req, res) => {
       paymentOptions,
       isExternalCateringAllowed,
       fullAddress,
+      advancePayment,
     } = req.body;
 
-    // Safely handle and trim fields
     const trimmedMandapName =
       typeof mandapName === "string" ? mandapName.trim() : mandapName;
+    const trimmedMandapDesc =
+      typeof mandapDesc === "string" ? mandapDesc.trim() : mandapDesc; // Added field
     const trimmedCity = typeof city === "string" ? city.trim() : city;
     const trimmedState = typeof state === "string" ? state.trim() : state;
     const trimmedPinCode =
@@ -77,6 +80,7 @@ exports.createMandap = async (req, res) => {
 
     const requiredFields = {
       mandapName: trimmedMandapName,
+      mandapDesc: trimmedMandapDesc,
       city: trimmedCity,
       state: trimmedState,
       pinCode: trimmedPinCode,
@@ -102,6 +106,7 @@ exports.createMandap = async (req, res) => {
         paymentOptions,
         isExternalCateringAllowed,
         fullAddress: trimmedFullAddress,
+        advancePayment,
       };
       const omittedOptionalFields = Object.entries(optionalFields)
         .filter(([key, value]) => !value)
@@ -166,6 +171,7 @@ exports.createMandap = async (req, res) => {
     // Create mandap document
     const mandap = await mandapModel.create({
       mandapName: trimmedMandapName,
+      mandapDesc: trimmedMandapDesc,
       providerId: req.provider._id,
       availableDates: parsedAvailableDates,
       venueType: parsedVenueType,
@@ -183,6 +189,7 @@ exports.createMandap = async (req, res) => {
       isExternalCateringAllowed:
         isExternalCateringAllowed === "true" ||
         isExternalCateringAllowed === true,
+      advancePayment: Number(advancePayment) || 0,
     });
 
     return res
@@ -259,6 +266,7 @@ exports.updateMandap = async (req, res) => {
     }
     const {
       mandapName,
+      mandapDesc,
       city,
       state,
       pinCode,
@@ -274,7 +282,8 @@ exports.updateMandap = async (req, res) => {
       outdoorFacilities,
       paymentOptions,
       isExternalCateringAllowed,
-      fullAddress, // Added fullAddress
+      fullAddress,
+      advancePayment,
     } = req.body;
 
     // Parse FormData inputs
@@ -308,7 +317,7 @@ exports.updateMandap = async (req, res) => {
 
     // Handle address updates
     let addressId = mandap.address;
-    const isAddressProvided = city || state || pinCode || fullAddress; // Added fullAddress
+    const isAddressProvided = city || state || pinCode || fullAddress;
     if (isAddressProvided) {
       if (!city || !state || !pinCode) {
         return res
@@ -322,7 +331,7 @@ exports.updateMandap = async (req, res) => {
       if (addressId) {
         await addressModel.findByIdAndUpdate(
           addressId,
-          { city, state, pinCode, fullAddress }, // Added fullAddress
+          { city, state, pinCode, fullAddress },
           { new: true, runValidators: true }
         );
       } else {
@@ -330,7 +339,7 @@ exports.updateMandap = async (req, res) => {
           city,
           state,
           pinCode,
-          fullAddress, // Added fullAddress
+          fullAddress,
         });
         addressId = newAddress._id;
       }
@@ -352,6 +361,7 @@ exports.updateMandap = async (req, res) => {
         mandapId,
         {
           mandapName: mandapName || mandap.mandapName,
+          mandapDesc: mandapDesc || mandap.mandapDesc,
           availableDates: parsedAvailableDates,
           venueType: parsedVenueType,
           address: addressId,
@@ -375,6 +385,7 @@ exports.updateMandap = async (req, res) => {
                 isExternalCateringAllowed === false
               ? false
               : mandap.isExternalCateringAllowed,
+          advancePayment: Number(advancePayment) || mandap.advancePayment,
         },
         { new: true, runValidators: true }
       )
@@ -439,9 +450,23 @@ exports.getAllMandaps = async (req, res) => {
   try {
     const mandaps = await mandapModel
       .find({ isActive: true })
-      .populate("address")
+      .populate("address providerId")
       .lean();
-    return res.status(200).json(createSuccessResult({ mandaps }));
+    const mandapsWithProviderName = await Promise.all(
+      mandaps.map(async (mandap) => {
+        const provider = await providerModel
+          .findById(mandap.providerId)
+          .select("name")
+          .lean();
+        return {
+          ...mandap,
+          providerName: provider ? provider.name : "Unknown Provider",
+        };
+      })
+    );
+    return res
+      .status(200)
+      .json(createSuccessResult({ mandaps: mandapsWithProviderName }));
   } catch (error) {
     console.error("Error fetching all mandaps:", error);
     return res.status(500).json(createErrorResult(error.message));
@@ -535,14 +560,24 @@ exports.getMandapByID = async (req, res) => {
     }
     const mandap = await mandapModel
       .findById(mandapId)
-      .populate("address")
+      .populate("address providerId")
       .lean();
     if (!mandap || !mandap.isActive) {
       return res
         .status(404)
         .json(createErrorResult("Mandap not found or inactive"));
     }
-    return res.status(200).json(createSuccessResult({ mandap }));
+    const provider = await providerModel
+      .findById(mandap.providerId)
+      .select("name")
+      .lean();
+    const mandapWithProviderName = {
+      ...mandap,
+      providerName: provider ? provider.name : "Unknown Provider",
+    };
+    return res
+      .status(200)
+      .json(createSuccessResult({ mandap: mandapWithProviderName }));
   } catch (error) {
     console.error("Error fetching mandap by ID:", error);
     return res.status(500).json(createErrorResult(error.message));
