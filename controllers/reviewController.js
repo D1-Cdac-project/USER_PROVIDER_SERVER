@@ -1,4 +1,5 @@
 const { createErrorResult, createSuccessResult } = require("../config/result");
+const bookingModel = require("../models/bookingModel");
 
 const mandapModel = require("../models/mandapModel");
 const reviewModel = require("../models/reviewModel");
@@ -8,12 +9,13 @@ exports.addReview = async (req, res) => {
   try {
     if (!req.user)
       return res.status(400).json(createErrorResult("Invalid Request"));
-    const { mandapId, rating, comment } = req.body;
+    const { mandapId, rating, comment, bookingId } = req.body;
 
     const mandap = await mandapModel.findById(mandapId);
     if (!mandap)
       return res.status(404).json(createErrorResult("Mandap not found"));
 
+    // Create the review
     await reviewModel.create({
       userId: req.user._id,
       mandapId,
@@ -21,10 +23,24 @@ exports.addReview = async (req, res) => {
       comment,
     });
 
+    // Update the booking to set isReviewAdded to true
+    if (bookingId) {
+      const booking = await bookingModel.findById(bookingId);
+      if (!booking) {
+        return res.status(404).json(createErrorResult("Booking not found"));
+      }
+      await bookingModel.findByIdAndUpdate(
+        bookingId,
+        { $set: { isReviewAdded: true } },
+        { new: true, runValidators: true }
+      );
+    }
+
     return res
       .status(201)
       .json(createSuccessResult({ message: "Review added successfully" }));
   } catch (error) {
+    console.error("Error adding review:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
