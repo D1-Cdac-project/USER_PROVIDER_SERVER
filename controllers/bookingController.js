@@ -607,7 +607,7 @@ exports.getAllBookingsByUser = async (req, res) => {
 
     const populatedBookings = await Promise.all(
       bookings.map(async (booking) => {
-        booking.mandapId = await mandapModel.findById(booking.mandapId).lean();
+        booking.mandapId = await mandapModel.findById(booking.mandapId).populate("address").lean();
         booking.photographer = await photographerModel
           .find({ _id: { $in: booking.photographer || [] } })
           .lean();
