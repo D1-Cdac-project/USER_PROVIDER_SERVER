@@ -39,15 +39,18 @@ const {
 const {
   getAllBookingsByProvider,
 } = require("../controllers/bookingController");
-const { getReviewByMandapId } = require("../controllers/reviewController");
+const {
+  getReviewByMandapId,
+  getAllReviewsByProviderId,
+} = require("../controllers/reviewController");
 
 const router = express.Router();
 
+//provider profile releated
 router.post("/signup", (req, res) => registerProvider(req, res, req.io));
 router.post("/login", (req, res) => loginProvider(req, res, req.io));
 router.post("/logout", logoutProvider);
 router.get("/profile", isProvider, getProviderProfile);
-router.get("/bookings", isProvider, getAllBookingsByProvider);
 router.put(
   "/update-profile",
   isProvider,
@@ -55,6 +58,10 @@ router.put(
   updateProvider
 );
 
+//bookings
+router.get("/bookings", isProvider, getAllBookingsByProvider);
+
+//mandaps
 router.post(
   "/mandap",
   isProvider,
@@ -70,13 +77,14 @@ router.put(
 );
 router.delete("/delete-mandap/:mandapId", isProvider, deleteMandap);
 
+//photographer
 router.post(
   "/add-photographer",
   isProvider,
   upload.array("sampleWork", 10),
   addPhotographer
 );
-router.get("/get-all-photographers/:mandapId", isProvider, getAllPhotographers);
+router.get("/get-all-photographers", isProvider, getAllPhotographers);
 router.put(
   "/update-photographer/:photographerId",
   isProvider,
@@ -94,6 +102,7 @@ router.get(
   isProvider,
   getPhotographerById
 );
+
 // caterer
 router.post(
   "/add-caterer",
@@ -107,12 +116,12 @@ router.put(
   upload.single("categoryImage"),
   updateCaterer
 );
-
 router.delete("/delete-caterer/:catererId", isProvider, deleteCaterer);
 router.get("/get-all-caterers", isProvider, getAllCaterer);
 router.get("/get-caterer/:catererId", isProvider, getCatererById);
 router.get("/get-all-caterer/:mandapId", isProvider, getAllCaterersByMandapId);
 
+//rooms
 router.post("/add-room", upload.any(), isProvider, addRoom);
 router.put(
   "/update-room/:roomId",
@@ -127,6 +136,12 @@ router.delete("/delete-room/:roomId", isProvider, deleteRoom);
 router.get("/get-all-rooms", isProvider, getAllRooms);
 router.get("/get-room/:roomId", isProvider, getRoomById);
 
+//reviews
 router.get("/get-review/:mandapId", isProvider, getReviewByMandapId);
+router.get(
+  "/get-all-mandap-reviews/:providerId",
+  isProvider,
+  getAllReviewsByProviderId
+);
 
 module.exports = router;

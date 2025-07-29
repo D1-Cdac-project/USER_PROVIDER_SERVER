@@ -119,3 +119,25 @@ exports.getReviewById = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+//hry all mandaps reviews of provider
+exports.getAllReviewsByProviderId = async (req, res) => {
+  try {
+    const { providerId } = req.params;
+    const mandaps = await mandapModel.find({ providerId, isActive: true });
+    if (!mandaps || mandaps.length === 0) {
+      return res
+        .status(404)
+        .json(createErrorResult("No active mandaps found for this provider"));
+    }
+
+    const mandapIds = mandaps.map((mandap) => mandap._id);
+    const reviews = await reviewModel
+      .find({ mandapId: { $in: mandapIds }, isActive: true })
+      .populate("userId mandapId");
+
+    return res.status(200).json(createSuccessResult({ reviews }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};

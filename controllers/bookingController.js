@@ -510,7 +510,7 @@ exports.updateBooking = async (req, res) => {
   }
 };
 
-// Fetches all active bookings for provider’s mandaps
+// // Fetches all active bookings for provider’s mandaps
 exports.getAllBookingsByProvider = async (req, res) => {
   try {
     if (!req.provider) {
@@ -536,24 +536,44 @@ exports.getAllBookingsByProvider = async (req, res) => {
 
     const populatedBookings = await Promise.all(
       bookings.map(async (booking) => {
-        booking.mandapId = await mandapModel.findById(booking.mandapId).lean();
-        booking.userId = await mongoose
+        const mandap = await mandapModel.findById(booking.mandapId).lean();
+        if (mandap && mandap.address) {
+          mandap.address = await mongoose
+            .model("Address")
+            .findById(mandap.address)
+            .lean();
+        }
+        booking.mandapId = mandap;
+
+        const user = await mongoose
           .model("Users")
           .findById(booking.userId)
           .lean();
+        if (user && user.address) {
+          user.address = await mongoose
+            .model("Address")
+            .findById(user.address)
+            .lean();
+        }
+        booking.userId = user;
+
         booking.photographer = await photographerModel
           .find({ _id: { $in: booking.photographer || [] } })
           .lean();
+
         booking.caterer = await catererModel
           .find({ _id: { $in: booking.caterer || [] } })
           .lean();
+
         booking.room = booking.room
           ? await roomModel.findById(booking.room).lean()
           : null;
+
         const remainingAmount =
           booking.amountPaid < booking.totalAmount
             ? booking.totalAmount - booking.amountPaid
             : 0;
+
         return { ...booking, remainingAmount };
       })
     );
