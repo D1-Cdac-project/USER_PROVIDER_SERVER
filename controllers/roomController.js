@@ -6,9 +6,41 @@ const roomModel = require("../models/roomModel");
 const { createErrorResult, createSuccessResult } = require("../config/result");
 const { cloudinary } = require("../config/cloudinary");
 
-// Helper to parse comma-separated room data or structured form fields
+// Helper to parse room data
 const parseRoomData = (input) => {
   if (!input) return {};
+
+  // Handle JSON string case
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      return {
+        noOfRooms: parsed.noOfRooms ? Number(parsed.noOfRooms) : undefined,
+        pricePerNight: parsed.pricePerNight
+          ? Number(parsed.pricePerNight)
+          : undefined,
+        amenities: parsed.amenities
+          ? Array.isArray(parsed.amenities)
+            ? parsed.amenities
+            : parsed.amenities.split(",").map((s) => s.trim())
+          : undefined,
+      };
+    } catch (error) {
+      // Fallback to comma-separated string parsing
+      const [noOfRooms, pricePerNight, amenities] = input
+        .split(",")
+        .map((s) => s.trim());
+      return {
+        noOfRooms: noOfRooms ? Number(noOfRooms) : undefined,
+        pricePerNight: pricePerNight ? Number(pricePerNight) : undefined,
+        amenities: amenities
+          ? amenities.split("|").map((s) => s.trim())
+          : undefined,
+      };
+    }
+  }
+
+  // Handle object case
   if (typeof input === "object") {
     return {
       noOfRooms: input.noOfRooms ? Number(input.noOfRooms) : undefined,
@@ -18,22 +50,11 @@ const parseRoomData = (input) => {
       amenities: input.amenities
         ? Array.isArray(input.amenities)
           ? input.amenities
-          : input.amenities.split("|").map((s) => s.trim())
+          : input.amenities.split(",").map((s) => s.trim())
         : undefined,
     };
   }
-  if (typeof input === "string") {
-    const [noOfRooms, pricePerNight, amenities] = input
-      .split(",")
-      .map((s) => s.trim());
-    return {
-      noOfRooms: noOfRooms ? Number(noOfRooms) : undefined,
-      pricePerNight: pricePerNight ? Number(pricePerNight) : undefined,
-      amenities: amenities
-        ? amenities.split("|").map((s) => s.trim())
-        : undefined,
-    };
-  }
+
   return {};
 };
 
@@ -473,7 +494,6 @@ exports.getRoomById = async (req, res) => {
         createSuccessResult({ room, message: "Room fetched successfully" })
       );
   } catch (error) {
-    console.error("Error fetching room by ID:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
