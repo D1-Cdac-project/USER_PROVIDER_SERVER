@@ -1,12 +1,10 @@
 const mongoose = require("mongoose");
-
 const catererModel = require("../models/catererModel");
 const mandapModel = require("../models/mandapModel");
-
 const { cloudinary } = require("../config/cloudinary");
 const { createErrorResult, createSuccessResult } = require("../config/result");
 
-// Creates a new caterer with Cloudinary image upload
+// Creates a new caterer with Cloudinary image uploads for menuCategories
 exports.addCaterer = async (req, res) => {
   if (!req.provider) {
     return res
@@ -17,7 +15,7 @@ exports.addCaterer = async (req, res) => {
     const {
       mandapId,
       catererName,
-      menuCategory,
+      menuCategories,
       foodType,
       isCustomizable,
       customizableItems,
@@ -40,33 +38,45 @@ exports.addCaterer = async (req, res) => {
         .json(createErrorResult("Mandap not found or unauthorized"));
     }
 
-    // Parse menuCategory
-    let parsedMenuCategory;
-    if (typeof menuCategory === "string") {
+    // Parse menuCategories
+    let parsedMenuCategories;
+    if (typeof menuCategories === "string") {
       try {
-        parsedMenuCategory = JSON.parse(menuCategory);
+        parsedMenuCategories = JSON.parse(menuCategories);
       } catch (e) {
         return res
           .status(400)
           .json(
             createErrorResult(
-              "Invalid JSON format for menuCategory: " + e.message
+              "Invalid JSON format for menuCategories: " + e.message
             )
           );
       }
     } else {
-      parsedMenuCategory = menuCategory;
+      parsedMenuCategories = menuCategories;
     }
 
-    // Validate required menuCategory fields
+    // Validate menuCategories array
     if (
-      !parsedMenuCategory.category ||
-      !parsedMenuCategory.menuItems ||
-      !parsedMenuCategory.pricePerPlate
+      !Array.isArray(parsedMenuCategories) ||
+      parsedMenuCategories.length === 0
     ) {
       return res
         .status(400)
-        .json(createErrorResult("Missing required menuCategory fields"));
+        .json(createErrorResult("menuCategories must be a non-empty array"));
+    }
+
+    // Validate each menuCategory
+    for (const category of parsedMenuCategories) {
+      if (
+        !category.category ||
+        !category.menuItems ||
+        !category.pricePerPlate
+      ) {
+        return res
+          .status(400)
+          .json(createErrorResult("Missing required menuCategory fields"));
+      }
     }
 
     // Parse customizableItems
@@ -100,21 +110,43 @@ exports.addCaterer = async (req, res) => {
       }
     }
 
-    // Handle image upload
-    let categoryImage;
-    if (req.file) {
-      categoryImage = req.file.path;
+    // Handle image uploads for each menuCategory
+    const uploadedImages = req.files || [];
+    if (uploadedImages.length > parsedMenuCategories.length) {
+      return res
+        .status(400)
+        .json(
+          createErrorResult(
+            "Number of images cannot exceed number of menu categories"
+          )
+        );
     }
+
+    const menuCategoriesWithImages = await Promise.all(
+      parsedMenuCategories.map(async (category, index) => {
+        const file = uploadedImages[index];
+        let categoryImage = category.categoryImage || "";
+        if (file) {
+          const result = await cloudinary.uploader.upload(file.path, {
+            folder: "BookMyMandap",
+          });
+          categoryImage = result.secure_url;
+        }
+        return { ...category, categoryImage };
+      })
+    );
 
     await catererModel.create({
       mandapId,
       catererName,
-      menuCategory: { ...parsedMenuCategory, categoryImage },
+      menuCategory: menuCategoriesWithImages,
       foodType,
       isCustomizable,
       customizableItems: parsedCustomizableItems,
       hasTastingSession,
+      isActive: true,
     });
+
     return res
       .status(201)
       .json(createSuccessResult({ message: "Caterer added successfully" }));
@@ -124,7 +156,7 @@ exports.addCaterer = async (req, res) => {
   }
 };
 
-// Updates a caterer with Cloudinary image handling
+// Updates a caterer with Cloudinary image handling for menuCategories
 exports.updateCaterer = async (req, res) => {
   if (!req.provider) {
     return res
@@ -136,7 +168,7 @@ exports.updateCaterer = async (req, res) => {
     const {
       mandapId,
       catererName,
-      menuCategory,
+      menuCategories,
       foodType,
       isCustomizable,
       customizableItems,
@@ -169,33 +201,35 @@ exports.updateCaterer = async (req, res) => {
       updatedMandapId = mandapId;
     }
 
-    // Parse menuCategory
-    let parsedMenuCategory = caterer.menuCategory;
-    if (menuCategory) {
-      if (typeof menuCategory === "string") {
+    // Parse menuCategories
+    let parsedMenuCategories = caterer.menuCategory;
+    if (menuCategories) {
+      if (typeof menuCategories === "string") {
         try {
-          parsedMenuCategory = JSON.parse(menuCategory);
+          parsedMenuCategories = JSON.parse(menuCategories);
         } catch (e) {
           return res
             .status(400)
             .json(
               createErrorResult(
-                "Invalid JSON format for menuCategory: " + e.message
+                "Invalid JSON format for menuCategories: " + e.message
               )
             );
         }
       } else {
-        parsedMenuCategory = menuCategory;
+        parsedMenuCategories = menuCategories;
       }
-      // Validate required menuCategory fields
-      if (
-        !parsedMenuCategory.category ||
-        !parsedMenuCategory.menuItems ||
-        !parsedMenuCategory.pricePerPlate
-      ) {
-        return res
-          .status(400)
-          .json(createErrorResult("Missing required menuCategory fields"));
+      // Validate each menuCategory
+      for (const category of parsedMenuCategories) {
+        if (
+          !category.category ||
+          !category.menuItems ||
+          !category.pricePerPlate
+        ) {
+          return res
+            .status(400)
+            .json(createErrorResult("Missing required menuCategory fields"));
+        }
       }
     }
 
@@ -237,22 +271,36 @@ exports.updateCaterer = async (req, res) => {
       }
     }
 
-    // Handle image update
-    let categoryImage = caterer.menuCategory.categoryImage;
-    if (req.file) {
-      if (categoryImage) {
-        const publicId = categoryImage.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
-      }
-      categoryImage = req.file.path; // New Cloudinary URL
-    }
+    // Handle image updates for each menuCategory
+    const uploadedImages = req.files || [];
+    const menuCategoriesWithImages = await Promise.all(
+      parsedMenuCategories.map(async (category, index) => {
+        const file = uploadedImages[index];
+        let categoryImage = category.categoryImage || "";
+        if (file) {
+          // Delete old image if it exists
+          if (category.categoryImage) {
+            const publicId = category.categoryImage
+              .split("/")
+              .pop()
+              .split(".")[0];
+            await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+          }
+          const result = await cloudinary.uploader.upload(file.path, {
+            folder: "BookMyMandap",
+          });
+          categoryImage = result.secure_url;
+        }
+        return { ...category, categoryImage };
+      })
+    );
 
     await catererModel.findByIdAndUpdate(
       catererId,
       {
         mandapId: updatedMandapId,
         catererName: catererName || caterer.catererName,
-        menuCategory: { ...parsedMenuCategory, categoryImage },
+        menuCategory: menuCategoriesWithImages,
         foodType: foodType || caterer.foodType,
         isCustomizable:
           isCustomizable !== undefined
@@ -263,9 +311,11 @@ exports.updateCaterer = async (req, res) => {
           hasTastingSession !== undefined
             ? hasTastingSession
             : caterer.hasTastingSession,
+        isActive: true,
       },
       { new: true, runValidators: true }
     );
+
     return res
       .status(200)
       .json(createSuccessResult({ message: "Caterer updated successfully" }));
@@ -299,12 +349,12 @@ exports.deleteCaterer = async (req, res) => {
           createErrorResult("Unauthorized: Provider does not own this mandap")
         );
     }
-    if (caterer.menuCategory.categoryImage) {
-      const publicId = caterer.menuCategory.categoryImage
-        .split("/")
-        .pop()
-        .split(".")[0];
-      await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+    // Delete all category images
+    for (const category of caterer.menuCategory) {
+      if (category.categoryImage) {
+        const publicId = category.categoryImage.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+      }
     }
     await catererModel.findByIdAndUpdate(catererId, { isActive: false });
     return res

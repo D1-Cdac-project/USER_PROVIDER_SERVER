@@ -12,32 +12,33 @@ const catererSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    menuCategory: {
-      category: {
-        type: String,
-        enum: ["Basic", "Standard", "Premium", "Luxury"],
-        required: true,
-      },
-      menuItems: [
-        {
-          itemName: {
-            type: String,
-            required: true,
-          },
-          itemPrice: {
-            type: Number,
-            required: true,
-          },
+    menuCategory: [
+      {
+        category: {
+          type: String,
+          enum: ["Basic", "Standard", "Premium", "Luxury"],
+          required: true,
         },
-      ],
-      pricePerPlate: {
-        type: Number,
-        required: true,
+        menuItems: [
+          {
+            itemName: {
+              type: String,
+              required: true,
+            },
+            itemPrice: {
+              type: Number,
+            },
+          },
+        ],
+        pricePerPlate: {
+          type: Number,
+          required: true,
+        },
+        categoryImage: {
+          type: String,
+        },
       },
-      categoryImage: {
-        type: String,
-      },
-    },
+    ],
     foodType: {
       type: String,
       enum: ["Veg", "Non-Veg", "Both", "Jain"],
