@@ -107,13 +107,13 @@ router.get(
 router.post(
   "/add-caterer",
   isProvider,
-  upload.single("categoryImage"),
+  upload.array("categoryImage", 10),
   addCaterer
 );
 router.put(
   "/update-caterer/:catererId",
   isProvider,
-  upload.single("categoryImage"),
+  upload.array("categoryImage", 10),
   updateCaterer
 );
 router.delete("/delete-caterer/:catererId", isProvider, deleteCaterer);
