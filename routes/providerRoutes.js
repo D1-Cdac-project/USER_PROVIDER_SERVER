@@ -84,7 +84,7 @@ router.post(
   upload.array("sampleWork", 10),
   addPhotographer
 );
-router.get("/get-all-photographers/:mandapId", isProvider, getAllPhotographers);
+router.get("/get-all-photographers", isProvider, getAllPhotographers);
 router.put(
   "/update-photographer/:photographerId",
   isProvider,
