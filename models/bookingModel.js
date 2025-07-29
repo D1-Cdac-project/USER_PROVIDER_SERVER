@@ -43,6 +43,10 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       enum: ["Partial", "Completed", "Cancelled"],
     },
+    isReviewAdded:{
+      type: Boolean,
+      default: false,
+    },
     isActive: {
       type: Boolean,
       default: true,

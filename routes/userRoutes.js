@@ -8,6 +8,7 @@ const {
   logoutUser,
   getUserDetails,
   updateProfile,
+  aboutUsEmailSender,
 } = require("../controllers/userControllers");
 
 const {
@@ -66,8 +67,9 @@ router.put(
   upload.single("profileImage"),
   updateProfile
 );
+router.post("/send", isUser,aboutUsEmailSender);
 
-//favourite mandaps
+// add favourite mandap api's 
 router.post("/add-favorite-mandap", isUser, addFavoriteMandap);
 router.get("/favourite-mandaps", isUser, getAllFavoriteMandaps);
 router.delete("/favourite-mandap/:mandapId", isUser, deleteFavoriteMandap);
