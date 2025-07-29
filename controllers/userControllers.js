@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const nodemailer = require("nodemailer");
 
 const generateToken = require("../config/generateToken");
 const { createSuccessResult, createErrorResult } = require("../config/result");
@@ -182,3 +183,34 @@ exports.updateProfile = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+
+exports.aboutUsEmailSender=async(req,res)=>{
+  const { name, email, message } = req.body;
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+        host: process.env.EMAIL_HOST,
+        port: process.env.EMAIL_PORT,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"${name}" <${email}>`,
+      to: process.env.EMAIL_TO || process.env.EMAIL_USER,
+      subject: "New Contact Form Submission",
+      html: `<p><strong>Name:</strong> ${name}</p>
+             <p><strong>Email:</strong> ${email}</p>
+             <p><strong>Message:</strong><br>${message}</p>`,
+    });
+
+    res.status(200).json({ success: true, message: "Email sent successfully" });
+  } catch (error) {
+    console.error("Email error:", error);
+    res.status(500).json({ success: false, message: "Email sending failed" });
+  }
+}
