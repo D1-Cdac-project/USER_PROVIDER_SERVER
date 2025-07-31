@@ -4,7 +4,6 @@ const mandapModel = require("../models/mandapModel");
 const { cloudinary } = require("../config/cloudinary");
 const { createErrorResult, createSuccessResult } = require("../config/result");
 
-// Creates a new caterer with Cloudinary image uploads for menuCategories
 exports.addCaterer = async (req, res) => {
   if (!req.provider) {
     return res
@@ -15,7 +14,7 @@ exports.addCaterer = async (req, res) => {
     const {
       mandapId,
       catererName,
-      menuCategories,
+      menuCategory,
       foodType,
       isCustomizable,
       customizableItems,
@@ -38,45 +37,72 @@ exports.addCaterer = async (req, res) => {
         .json(createErrorResult("Mandap not found or unauthorized"));
     }
 
-    // Parse menuCategories
-    let parsedMenuCategories;
-    if (typeof menuCategories === "string") {
+    // Parse menuCategory
+    let parsedMenuCategory;
+    if (typeof menuCategory === "string") {
       try {
-        parsedMenuCategories = JSON.parse(menuCategories);
+        parsedMenuCategory = JSON.parse(menuCategory);
       } catch (e) {
         return res
           .status(400)
           .json(
             createErrorResult(
-              "Invalid JSON format for menuCategories: " + e.message
+              "Invalid JSON format for menuCategory: " + e.message
             )
           );
       }
     } else {
-      parsedMenuCategories = menuCategories;
+      parsedMenuCategory = menuCategory;
     }
 
-    // Validate menuCategories array
-    if (
-      !Array.isArray(parsedMenuCategories) ||
-      parsedMenuCategories.length === 0
-    ) {
+    // Validate menuCategory array
+    if (!Array.isArray(parsedMenuCategory) || parsedMenuCategory.length === 0) {
       return res
         .status(400)
-        .json(createErrorResult("menuCategories must be a non-empty array"));
+        .json(createErrorResult("menuCategory must be a non-empty array"));
     }
 
     // Validate each menuCategory
-    for (const category of parsedMenuCategories) {
+    for (const category of parsedMenuCategory) {
       if (
         !category.category ||
         !category.menuItems ||
-        !category.pricePerPlate
+        !category.pricePerPlate ||
+        !["Basic", "Standard", "Premium", "Luxury"].includes(category.category)
       ) {
         return res
           .status(400)
-          .json(createErrorResult("Missing required menuCategory fields"));
+          .json(createErrorResult("Invalid or missing menuCategory fields"));
       }
+    }
+
+    // Parse and validate foodType
+    let parsedFoodType;
+    if (typeof foodType === "string") {
+      try {
+        parsedFoodType = JSON.parse(foodType);
+      } catch (e) {
+        return res
+          .status(400)
+          .json(
+            createErrorResult("Invalid JSON format for foodType: " + e.message)
+          );
+      }
+    } else {
+      parsedFoodType = foodType;
+    }
+    if (
+      !Array.isArray(parsedFoodType) ||
+      parsedFoodType.length === 0 ||
+      !parsedFoodType.every((type) =>
+        ["Veg", "Non-Veg", "Both", "Jain"].includes(type)
+      )
+    ) {
+      return res
+        .status(400)
+        .json(
+          createErrorResult("foodType must be a non-empty array of valid types")
+        );
     }
 
     // Parse customizableItems
@@ -95,9 +121,14 @@ exports.addCaterer = async (req, res) => {
         parsedCustomizableItems = JSON.parse(customizableItems);
         if (
           !Array.isArray(parsedCustomizableItems) ||
-          parsedCustomizableItems.length === 0
+          parsedCustomizableItems.length === 0 ||
+          !parsedCustomizableItems.every(
+            (item) => item.itemName && item.itemPrice
+          )
         ) {
-          throw new Error("customizableItems must be a non-empty array");
+          return res
+            .status(400)
+            .json(createErrorResult("Invalid customizableItems format"));
         }
       } catch (e) {
         return res
@@ -112,7 +143,7 @@ exports.addCaterer = async (req, res) => {
 
     // Handle image uploads for each menuCategory
     const uploadedImages = req.files || [];
-    if (uploadedImages.length > parsedMenuCategories.length) {
+    if (uploadedImages.length > parsedMenuCategory.length) {
       return res
         .status(400)
         .json(
@@ -122,9 +153,11 @@ exports.addCaterer = async (req, res) => {
         );
     }
 
-    const menuCategoriesWithImages = await Promise.all(
-      parsedMenuCategories.map(async (category, index) => {
-        const file = uploadedImages[index];
+    const menuCategoryWithImages = await Promise.all(
+      parsedMenuCategory.map(async (category, index) => {
+        const file = uploadedImages.find(
+          (f) => f.fieldname === `categoryImage[${index}]`
+        );
         let categoryImage = category.categoryImage || "";
         if (file) {
           const result = await cloudinary.uploader.upload(file.path, {
@@ -139,8 +172,8 @@ exports.addCaterer = async (req, res) => {
     await catererModel.create({
       mandapId,
       catererName,
-      menuCategory: menuCategoriesWithImages,
-      foodType,
+      menuCategory: menuCategoryWithImages,
+      foodType: parsedFoodType,
       isCustomizable,
       customizableItems: parsedCustomizableItems,
       hasTastingSession,
@@ -156,7 +189,6 @@ exports.addCaterer = async (req, res) => {
   }
 };
 
-// Updates a caterer with Cloudinary image handling for menuCategories
 exports.updateCaterer = async (req, res) => {
   if (!req.provider) {
     return res
@@ -168,13 +200,17 @@ exports.updateCaterer = async (req, res) => {
     const {
       mandapId,
       catererName,
-      menuCategories,
+      menuCategory,
       foodType,
       isCustomizable,
       customizableItems,
       hasTastingSession,
     } = req.body;
 
+    console.log("Update request body:", req.body);
+    console.log("Update request files:", req.files);
+
+    // Validate caterer existence
     const caterer = await catererModel.findById(catererId);
     if (!caterer) {
       return res.status(404).json(createErrorResult("Caterer not found"));
@@ -201,70 +237,113 @@ exports.updateCaterer = async (req, res) => {
       updatedMandapId = mandapId;
     }
 
-    // Parse menuCategories
-    let parsedMenuCategories = caterer.menuCategory;
-    if (menuCategories) {
-      if (typeof menuCategories === "string") {
+    // Parse menuCategory
+    let parsedMenuCategory = caterer.menuCategory;
+    if (menuCategory) {
+      if (typeof menuCategory === "string") {
         try {
-          parsedMenuCategories = JSON.parse(menuCategories);
+          parsedMenuCategory = JSON.parse(menuCategory);
         } catch (e) {
           return res
             .status(400)
             .json(
               createErrorResult(
-                "Invalid JSON format for menuCategories: " + e.message
+                "Invalid JSON format for menuCategory: " + e.message
               )
             );
         }
       } else {
-        parsedMenuCategories = menuCategories;
+        parsedMenuCategory = menuCategory;
       }
-      // Validate each menuCategory
-      for (const category of parsedMenuCategories) {
+      if (
+        !Array.isArray(parsedMenuCategory) ||
+        parsedMenuCategory.length === 0
+      ) {
+        return res
+          .status(400)
+          .json(createErrorResult("menuCategory must be a non-empty array"));
+      }
+      for (const category of parsedMenuCategory) {
         if (
           !category.category ||
           !category.menuItems ||
-          !category.pricePerPlate
+          !category.pricePerPlate ||
+          !["Basic", "Standard", "Premium", "Luxury"].includes(
+            category.category
+          )
         ) {
           return res
             .status(400)
-            .json(createErrorResult("Missing required menuCategory fields"));
+            .json(createErrorResult("Invalid or missing menuCategory fields"));
         }
+      }
+    }
+
+    // Parse and validate foodType
+    let parsedFoodType = caterer.foodType;
+    if (foodType) {
+      if (typeof foodType === "string") {
+        try {
+          parsedFoodType = JSON.parse(foodType);
+        } catch (e) {
+          return res
+            .status(400)
+            .json(
+              createErrorResult(
+                "Invalid JSON format for foodType: " + e.message
+              )
+            );
+        }
+      } else {
+        parsedFoodType = foodType;
+      }
+      if (
+        !Array.isArray(parsedFoodType) ||
+        parsedFoodType.length === 0 ||
+        !parsedFoodType.every((type) =>
+          ["Veg", "Non-Veg", "Both", "Jain"].includes(type)
+        )
+      ) {
+        return res
+          .status(400)
+          .json(
+            createErrorResult(
+              "foodType must be a non-empty array of valid types"
+            )
+          );
       }
     }
 
     // Parse customizableItems
     let parsedCustomizableItems = caterer.customizableItems;
     if (isCustomizable !== undefined) {
-      if (
-        isCustomizable &&
-        (!customizableItems || typeof customizableItems !== "string")
-      ) {
-        return res
-          .status(400)
-          .json(
-            createErrorResult(
-              "Customizable items are required when isCustomizable is true"
-            )
-          );
-      }
-      if (isCustomizable && customizableItems) {
-        try {
-          parsedCustomizableItems = JSON.parse(customizableItems);
-          if (
-            !Array.isArray(parsedCustomizableItems) ||
-            parsedCustomizableItems.length === 0
-          ) {
-            throw new Error("customizableItems must be a non-empty array");
-          }
-        } catch (e) {
-          return res
-            .status(400)
-            .json(
-              createErrorResult(
-                "Invalid JSON format for customizableItems: " + e.message
+      if (isCustomizable) {
+        if (!customizableItems || typeof customizableItems === "string") {
+          try {
+            parsedCustomizableItems = customizableItems
+              ? JSON.parse(customizableItems)
+              : [];
+            if (
+              parsedCustomizableItems.length > 0 &&
+              !parsedCustomizableItems.every(
+                (item) => item.itemName && item.itemPrice
               )
-            );
+            ) {
+              return res
+                .status(400)
+                .json(createErrorResult("Invalid customizableItems format"));
+            }
+          } catch (e) {
+            return res
+              .status(400)
+              .json(
+                createErrorResult(
+                  "Invalid JSON format for customizableItems: " + e.message
+                )
+              );
+          }
+        } else {
+          parsedCustomizableItems = customizableItems || [];
         }
       } else {
         parsedCustomizableItems = [];
@@ -273,14 +352,26 @@ exports.updateCaterer = async (req, res) => {
 
     // Handle image updates for each menuCategory
     const uploadedImages = req.files || [];
-    const menuCategoriesWithImages = await Promise.all(
-      parsedMenuCategories.map(async (category, index) => {
-        const file = uploadedImages[index];
-        let categoryImage = category.categoryImage || "";
-        if (file) {
-          // Delete old image if it exists
-          if (category.categoryImage) {
-            const publicId = category.categoryImage
+    const menuCategoryWithImages = await Promise.all(
+      parsedMenuCategory.map(async (category, index) => {
+        const file = uploadedImages.find(
+          (f) => f.fieldname === `categoryImage[${index}]`
+        );
+        let categoryImage =
+          category.categoryImage ||
+          caterer.menuCategory[index]?.categoryImage ||
+          "";
+        if (!categoryImage && caterer.menuCategory[index]?.categoryImage) {
+          // Delete old image if removed
+          const publicId = caterer.menuCategory[index].categoryImage
+            .split("/")
+            .pop()
+            .split(".")[0];
+          await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+        } else if (file) {
+          // Delete old image if exists and upload new one
+          if (caterer.menuCategory[index]?.categoryImage) {
+            const publicId = caterer.menuCategory[index].categoryImage
               .split("/")
               .pop()
               .split(".")[0];
@@ -300,8 +391,8 @@ exports.updateCaterer = async (req, res) => {
       {
         mandapId: updatedMandapId,
         catererName: catererName || caterer.catererName,
-        menuCategory: menuCategoriesWithImages,
-        foodType: foodType || caterer.foodType,
+        menuCategory: menuCategoryWithImages,
+        foodType: parsedFoodType,
         isCustomizable:
           isCustomizable !== undefined
             ? isCustomizable
@@ -325,7 +416,6 @@ exports.updateCaterer = async (req, res) => {
   }
 };
 
-// Soft deletes a caterer with Cloudinary image cleanup
 exports.deleteCaterer = async (req, res) => {
   if (!req.provider) {
     return res
@@ -366,7 +456,6 @@ exports.deleteCaterer = async (req, res) => {
   }
 };
 
-// Fetches all active caterers for provider’s mandaps
 exports.getAllCaterer = async (req, res) => {
   if (!req.provider) {
     return res
@@ -398,7 +487,6 @@ exports.getAllCaterer = async (req, res) => {
   }
 };
 
-// Fetches a single caterer by ID
 exports.getCatererById = async (req, res) => {
   if (!req.provider) {
     return res
@@ -439,7 +527,6 @@ exports.getCatererById = async (req, res) => {
   }
 };
 
-// Fetches all active caterers by mandap ID
 exports.getAllCaterersByMandapId = async (req, res) => {
   try {
     const { mandapId } = req.params;

@@ -39,11 +39,14 @@ const catererSchema = new mongoose.Schema(
         },
       },
     ],
-    foodType: {
-      type: String,
-      enum: ["Veg", "Non-Veg", "Both", "Jain"],
-      required: true,
-    },
+    foodType: [
+      {
+        type: String,
+        enum: ["Veg", "Non-Veg", "Both", "Jain"],
+        required: true,
+      },
+    ],
+
     isCustomizable: {
       type: Boolean,
       default: false,
@@ -52,11 +55,9 @@ const catererSchema = new mongoose.Schema(
       {
         itemName: {
           type: String,
-          required: true,
         },
         itemPrice: {
           type: Number,
-          required: true,
         },
       },
     ],
