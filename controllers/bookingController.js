@@ -195,6 +195,32 @@ exports.addBooking = async (req, res) => {
       paymentStatus,
     });
 
+    // Create notification for provider
+    const provider = await mandapModel
+      .findById(mandapId)
+      .select("providerId")
+      .lean();
+    if (provider) {
+      const notificationData = {
+        recipientId: provider.providerId,
+        recipientModel: "Providers",
+        type: "new_booking",
+        title: "New Booking Created",
+        message: `A new booking for mandap ${mandapId} has been created by user ${userId}.`,
+        relatedId: booking._id,
+        relatedModel: "Bookings",
+        isRead: false,
+        createdAt: new Date(),
+      };
+
+      await notificationModel.create(notificationData);
+      req.io.to(provider.providerId.toString()).emit("new_booking", {
+        ...notificationData,
+        id: booking._id,
+        read: false,
+      });
+    }
+
     return res.status(201).json(
       createSuccessResult({
         message: "Booking added successfully",
@@ -218,7 +244,6 @@ exports.addBooking = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
-
 // Soft deletes a booking by setting isActive to false
 exports.deleteBooking = async (req, res) => {
   try {
@@ -290,6 +315,32 @@ exports.deleteBooking = async (req, res) => {
       { isActive: false, paymentStatus: "Cancelled" },
       { new: true, runValidators: true }
     );
+
+    // Create notification for provider
+    const provider = await mandapModel
+      .findById(booking.mandapId)
+      .select("providerId")
+      .lean();
+    if (provider) {
+      const notificationData = {
+        recipientId: provider.providerId,
+        recipientModel: "Providers",
+        type: "deleted_booking",
+        title: "Booking Cancelled",
+        message: `Booking ${id} for mandap ${booking.mandapId} has been cancelled.`,
+        relatedId: id,
+        relatedModel: "Bookings",
+        isRead: false,
+        createdAt: new Date(),
+      };
+
+      await notificationModel.create(notificationData);
+      req.io.to(provider.providerId.toString()).emit("deleted_booking", {
+        ...notificationData,
+        id,
+        read: false,
+      });
+    }
 
     return res
       .status(200)
@@ -486,6 +537,32 @@ exports.updateBooking = async (req, res) => {
         .json(createErrorResult("Booking not found or inactive"));
     }
 
+    // Create notification for provider
+    const provider = await mandapModel
+      .findById(booking.mandapId)
+      .select("providerId")
+      .lean();
+    if (provider) {
+      const notificationData = {
+        recipientId: provider.providerId,
+        recipientModel: "Providers",
+        type: "updated_booking",
+        title: "Booking Updated",
+        message: `Booking ${id} for mandap ${booking.mandapId} has been updated.`,
+        relatedId: id,
+        relatedModel: "Bookings",
+        isRead: false,
+        createdAt: new Date(),
+      };
+
+      await notificationModel.create(notificationData);
+      req.io.to(provider.providerId.toString()).emit("updated_booking", {
+        ...notificationData,
+        id,
+        read: false,
+      });
+    }
+
     return res.status(200).json(
       createSuccessResult({
         message: "Booking updated successfully",
@@ -607,7 +684,10 @@ exports.getAllBookingsByUser = async (req, res) => {
 
     const populatedBookings = await Promise.all(
       bookings.map(async (booking) => {
-        booking.mandapId = await mandapModel.findById(booking.mandapId).populate("address").lean();
+        booking.mandapId = await mandapModel
+          .findById(booking.mandapId)
+          .populate("address")
+          .lean();
         booking.photographer = await photographerModel
           .find({ _id: { $in: booking.photographer || [] } })
           .lean();
