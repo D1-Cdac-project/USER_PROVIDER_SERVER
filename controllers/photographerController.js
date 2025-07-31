@@ -141,7 +141,7 @@ exports.addPhotographer = async (req, res) => {
   }
 };
 
-// Updates a photographer with Cloudinary image handling
+// // Updates a photographer with Cloudinary image handling
 exports.updatePhotographer = async (req, res) => {
   if (!req.provider) {
     return res
@@ -262,23 +262,53 @@ exports.updatePhotographer = async (req, res) => {
     }
 
     // Handle image update for sampleWork
-    let sampleWork = photographer.photographyTypes.flatMap(
-      (type) => type.sampleWork
+    let sampleWork = parsedPhotographyTypes.flatMap(
+      (type) => type.sampleWork || []
     );
     if (req.files && req.files.length > 0) {
       // Delete existing images from Cloudinary
-      for (const imageUrl of sampleWork) {
-        const publicId = imageUrl.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+      for (const imageUrl of photographer.photographyTypes.flatMap(
+        (type) => type.sampleWork || []
+      )) {
+        if (imageUrl) {
+          const publicId = imageUrl.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+        }
       }
-      sampleWork = req.files.map((file) => file.path);
+      sampleWork = await Promise.all(
+        req.files.map((file) =>
+          cloudinary.uploader.upload(file.path, {
+            folder: "BookMyMandap",
+          })
+        )
+      ).then((results) => results.map((result) => result.secure_url));
+    } else if (
+      parsedPhotographyTypes.every(
+        (type) => !type.sampleWork || type.sampleWork.length === 0
+      )
+    ) {
+      // Clear existing images if sampleWork is empty
+      for (const imageUrl of photographer.photographyTypes.flatMap(
+        (type) => type.sampleWork || []
+      )) {
+        if (imageUrl) {
+          const publicId = imageUrl.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+        }
+      }
+      sampleWork = [];
     }
 
     // Assign sampleWork to each photographyType
-    const updatedPhotographyTypes = parsedPhotographyTypes.map((type) => ({
-      ...type,
-      sampleWork: sampleWork.length > 0 ? sampleWork : type.sampleWork || [],
-    }));
+    const updatedPhotographyTypes = parsedPhotographyTypes.map(
+      (type, index) => ({
+        ...type,
+        sampleWork:
+          sampleWork.length > 0 && index === 0
+            ? sampleWork
+            : type.sampleWork || [],
+      })
+    );
 
     await photographerModel.findByIdAndUpdate(
       photographerId,
@@ -287,6 +317,7 @@ exports.updatePhotographer = async (req, res) => {
         photographerName: photographerName || photographer.photographerName,
         photographyTypes: updatedPhotographyTypes,
         printOption: parsedPrintOption,
+        isActive: true,
       },
       { new: true, runValidators: true }
     );
