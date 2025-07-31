@@ -233,3 +233,22 @@ exports.deleteProvider = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+// In index.js
+exports.getProviderNotifications = async (req, res) => {
+  try {
+    if (!req.provider) {
+      return res
+        .status(401)
+        .json(createErrorResult("Provider not authenticated"));
+    }
+    const notifications = await notificationModel
+      .find({ recipientId: req.provider._id, recipientModel: "Providers" })
+      .sort({ createdAt: -1 })
+      .lean();
+    return res.status(200).json(createSuccessResult({ notifications }));
+  } catch (error) {
+    console.error("Error fetching provider notifications:", error);
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
