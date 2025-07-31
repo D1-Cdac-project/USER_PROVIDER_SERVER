@@ -12,7 +12,7 @@ const mandapSchema = new mongoose.Schema({
   },
   providerId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Provider",
+    ref: "Providers",
     required: true,
   },
   availableDates: [

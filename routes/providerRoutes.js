@@ -6,6 +6,7 @@ const {
   logoutProvider,
   updateProvider,
   getProviderProfile,
+  getProviderNotifications,
 } = require("../controllers/providerControllers");
 const { upload } = require("../config/cloudinary");
 const {
@@ -13,6 +14,7 @@ const {
   getAllMandapByProviderID,
   deleteMandap,
   updateMandap,
+  getMandapByID,
 } = require("../controllers/mandapControllers");
 const {
   addPhotographer,
@@ -58,6 +60,9 @@ router.put(
   updateProvider
 );
 
+//get notification
+router.get("/notifications", isProvider, getProviderNotifications);
+
 //bookings
 router.get("/bookings", isProvider, getAllBookingsByProvider);
 
@@ -69,6 +74,7 @@ router.post(
   createMandap
 );
 router.get("/get-mandap", isProvider, getAllMandapByProviderID);
+router.get("/get-mandap/:mandapId", isProvider, getMandapByID);
 router.put(
   "/update-mandap/:mandapId",
   isProvider,
@@ -107,13 +113,13 @@ router.get(
 router.post(
   "/add-caterer",
   isProvider,
-  upload.array("categoryImage", 10),
+  upload.array("categoryImage[]", 10),
   addCaterer
 );
 router.put(
   "/update-caterer/:catererId",
   isProvider,
-  upload.array("categoryImage", 10),
+  upload.array("categoryImage[]", 10),
   updateCaterer
 );
 router.delete("/delete-caterer/:catererId", isProvider, deleteCaterer);
