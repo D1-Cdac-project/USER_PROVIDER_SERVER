@@ -10,7 +10,19 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["provider_registration", "user_registration", "approval_request"],
+      enum: [
+        "provider_registration",
+        "user_registration",
+        "approval_request",
+        "new_review",
+        "new_booking",
+        "deleted_booking",
+        "updated_booking",
+      ],
+      required: true,
+    },
+    title: {
+      type: String,
       required: true,
     },
     message: {
@@ -23,7 +35,14 @@ const notificationSchema = new mongoose.Schema(
     },
     relatedModel: {
       type: String,
-      enum: ["Providers", "Users", "ApprovalRequests", "Bookings", "Mandaps"],
+      enum: [
+        "Providers",
+        "Users",
+        "ApprovalRequests",
+        "Bookings",
+        "Mandaps",
+        "Reviews",
+      ],
     },
     isRead: {
       type: Boolean,

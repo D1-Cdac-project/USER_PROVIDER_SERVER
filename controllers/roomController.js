@@ -6,9 +6,41 @@ const roomModel = require("../models/roomModel");
 const { createErrorResult, createSuccessResult } = require("../config/result");
 const { cloudinary } = require("../config/cloudinary");
 
-// Helper to parse comma-separated room data or structured form fields
+// Helper to parse room data
 const parseRoomData = (input) => {
   if (!input) return {};
+
+  // Handle JSON string case
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      return {
+        noOfRooms: parsed.noOfRooms ? Number(parsed.noOfRooms) : undefined,
+        pricePerNight: parsed.pricePerNight
+          ? Number(parsed.pricePerNight)
+          : undefined,
+        amenities: parsed.amenities
+          ? Array.isArray(parsed.amenities)
+            ? parsed.amenities
+            : parsed.amenities.split(",").map((s) => s.trim())
+          : undefined,
+      };
+    } catch (error) {
+      // Fallback to comma-separated string parsing
+      const [noOfRooms, pricePerNight, amenities] = input
+        .split(",")
+        .map((s) => s.trim());
+      return {
+        noOfRooms: noOfRooms ? Number(noOfRooms) : undefined,
+        pricePerNight: pricePerNight ? Number(pricePerNight) : undefined,
+        amenities: amenities
+          ? amenities.split("|").map((s) => s.trim())
+          : undefined,
+      };
+    }
+  }
+
+  // Handle object case
   if (typeof input === "object") {
     return {
       noOfRooms: input.noOfRooms ? Number(input.noOfRooms) : undefined,
@@ -18,22 +50,11 @@ const parseRoomData = (input) => {
       amenities: input.amenities
         ? Array.isArray(input.amenities)
           ? input.amenities
-          : input.amenities.split("|").map((s) => s.trim())
+          : input.amenities.split(",").map((s) => s.trim())
         : undefined,
     };
   }
-  if (typeof input === "string") {
-    const [noOfRooms, pricePerNight, amenities] = input
-      .split(",")
-      .map((s) => s.trim());
-    return {
-      noOfRooms: noOfRooms ? Number(noOfRooms) : undefined,
-      pricePerNight: pricePerNight ? Number(pricePerNight) : undefined,
-      amenities: amenities
-        ? amenities.split("|").map((s) => s.trim())
-        : undefined,
-    };
-  }
+
   return {};
 };
 
@@ -194,7 +215,7 @@ exports.addRoom = async (req, res) => {
   }
 };
 
-// Updates a room with image handling
+// // Updates a room with image handling
 exports.updateRoom = async (req, res) => {
   if (!req.provider) {
     return res
@@ -203,45 +224,61 @@ exports.updateRoom = async (req, res) => {
   }
   try {
     const { roomId } = req.params;
+    const { mandapId, AcRoom, NonAcRoom } = req.body;
 
+    // Validate request body
     if (!req.body) {
       return res
         .status(400)
         .json(createErrorResult("Request body is missing or undefined"));
     }
 
-    const { AcRoom, NonAcRoom } = req.body;
-
+    // Validate room existence
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
       return res.status(400).json(createErrorResult("Invalid roomId"));
     }
-
     const room = await roomModel.findById(roomId);
     if (!room) {
       return res.status(404).json(createErrorResult("Room not found"));
     }
 
-    const mandap = await mandapModel.findById(room.mandapId);
-
-    if (
-      !mandap ||
-      mandap.providerId.toString() !== req.provider._id.toString()
-    ) {
-      return res
-        .status(403)
-        .json(
-          createErrorResult("Unauthorized: Provider does not own this mandap")
-        );
+    // Validate mandapId if provided
+    let updatedMandapId = room.mandapId;
+    if (mandapId) {
+      if (!mongoose.Types.ObjectId.isValid(mandapId)) {
+        return res
+          .status(400)
+          .json(createErrorResult("Invalid mandapId format"));
+      }
+      const mandap = await mandapModel.findOne({
+        _id: mandapId,
+        providerId: req.provider._id,
+        isActive: true,
+      });
+      if (!mandap) {
+        return res
+          .status(404)
+          .json(createErrorResult("Mandap not found or unauthorized"));
+      }
+      updatedMandapId = mandapId;
     }
 
     // Parse AcRoom and NonAcRoom
-    const parsedAcRoom = AcRoom ? parseRoomData(AcRoom) : room.AcRoom;
+    const parsedAcRoom = AcRoom
+      ? typeof AcRoom === "string"
+        ? JSON.parse(AcRoom)
+        : AcRoom
+      : room.AcRoom;
     const parsedNonAcRoom = NonAcRoom
-      ? parseRoomData(NonAcRoom)
+      ? typeof NonAcRoom === "string"
+        ? JSON.parse(NonAcRoom)
+        : NonAcRoom
       : room.NonAcRoom;
+
+    // Validate AcRoom and NonAcRoom fields
     if (
       parsedAcRoom.noOfRooms &&
-      (!Number.isInteger(parsedAcRoom.noOfRooms) ||
+      (!Number.isInteger(Number(parsedAcRoom.noOfRooms)) ||
         !parsedAcRoom.pricePerNight ||
         !parsedAcRoom.amenities)
     ) {
@@ -255,7 +292,7 @@ exports.updateRoom = async (req, res) => {
     }
     if (
       parsedNonAcRoom.noOfRooms &&
-      (!Number.isInteger(parsedNonAcRoom.noOfRooms) ||
+      (!Number.isInteger(Number(parsedNonAcRoom.noOfRooms)) ||
         !parsedNonAcRoom.pricePerNight ||
         !parsedNonAcRoom.amenities)
     ) {
@@ -305,38 +342,74 @@ exports.updateRoom = async (req, res) => {
         .json(createErrorResult("Invalid amenities for NonAcRoom"));
     }
 
-    let acRoomImages = room.AcRoom.roomImages;
-    let nonAcRoomImages = room.NonAcRoom.roomImages;
+    // Handle image updates
+    let acRoomImages = parsedAcRoom.roomImages || [];
+    let nonAcRoomImages = parsedNonAcRoom.roomImages || [];
     if (req.files && req.files.length > 0) {
       // Delete existing images from Cloudinary
       for (const imageUrl of [
-        ...room.AcRoom.roomImages,
-        ...room.NonAcRoom.roomImages,
+        ...(room.AcRoom.roomImages || []),
+        ...(room.NonAcRoom.roomImages || []),
       ]) {
-        const publicId = imageUrl.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+        if (imageUrl) {
+          const publicId = imageUrl.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+        }
       }
-      acRoomImages = req.files
-        .filter((file) => file.fieldname.startsWith("acRoomImages"))
-        .map((file) => file.path);
-      nonAcRoomImages = req.files
-        .filter((file) => file.fieldname.startsWith("nonAcRoomImages"))
-        .map((file) => file.path);
+      // Upload new images
+      const uploadedImages = await Promise.all(
+        req.files.map((file) =>
+          cloudinary.uploader.upload(file.path, {
+            folder: "BookMyMandap",
+          })
+        )
+      ).then((results) => results.map((result) => result.secure_url));
+
+      // Distribute images to AcRoom and NonAcRoom
+      acRoomImages = uploadedImages.filter((_, index) =>
+        req.files[index].fieldname.startsWith("acRoomImages")
+      );
+      nonAcRoomImages = uploadedImages.filter((_, index) =>
+        req.files[index].fieldname.startsWith("nonAcRoomImages")
+      );
+    } else if (
+      (!parsedAcRoom.roomImages || parsedAcRoom.roomImages.length === 0) &&
+      (!parsedNonAcRoom.roomImages || parsedNonAcRoom.roomImages.length === 0)
+    ) {
+      // Clear existing images if both roomImages arrays are empty
+      for (const imageUrl of [
+        ...(room.AcRoom.roomImages || []),
+        ...(room.NonAcRoom.roomImages || []),
+      ]) {
+        if (imageUrl) {
+          const publicId = imageUrl.split("/").pop().split(".")[0];
+          await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+        }
+      }
+      acRoomImages = [];
+      nonAcRoomImages = [];
     }
 
+    // Update room in database
     await roomModel.findByIdAndUpdate(
       roomId,
       {
+        mandapId: updatedMandapId,
         AcRoom: {
-          ...parsedAcRoom,
-          roomImages: acRoomImages,
+          noOfRooms: parsedAcRoom.noOfRooms || room.AcRoom.noOfRooms,
+          pricePerNight:
+            parsedAcRoom.pricePerNight || room.AcRoom.pricePerNight,
           amenities: parsedAcRoom.amenities || room.AcRoom.amenities,
+          roomImages: acRoomImages,
         },
         NonAcRoom: {
-          ...parsedNonAcRoom,
-          roomImages: nonAcRoomImages,
+          noOfRooms: parsedNonAcRoom.noOfRooms || room.NonAcRoom.noOfRooms,
+          pricePerNight:
+            parsedNonAcRoom.pricePerNight || room.NonAcRoom.pricePerNight,
           amenities: parsedNonAcRoom.amenities || room.NonAcRoom.amenities,
+          roomImages: nonAcRoomImages,
         },
+        isActive: true,
       },
       { new: true, runValidators: true }
     );
@@ -345,6 +418,7 @@ exports.updateRoom = async (req, res) => {
       .status(200)
       .json(createSuccessResult({ message: "Room updated successfully" }));
   } catch (error) {
+    console.error("Error updating room:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
@@ -473,7 +547,6 @@ exports.getRoomById = async (req, res) => {
         createSuccessResult({ room, message: "Room fetched successfully" })
       );
   } catch (error) {
-    console.error("Error fetching room by ID:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };

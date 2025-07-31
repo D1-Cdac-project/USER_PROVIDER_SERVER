@@ -1,6 +1,9 @@
+const mongoose = require("mongoose");
 const { createErrorResult, createSuccessResult } = require("../config/result");
 
+const bookingModel = require("../models/bookingModel");
 const mandapModel = require("../models/mandapModel");
+const notificationModel = require("../models/notificationModel");
 const reviewModel = require("../models/reviewModel");
 
 //adding review to the mandap
@@ -8,23 +11,85 @@ exports.addReview = async (req, res) => {
   try {
     if (!req.user)
       return res.status(400).json(createErrorResult("Invalid Request"));
-    const { mandapId, rating, comment } = req.body;
+    const { mandapId, rating, comment, bookingId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(mandapId)) {
+      return res.status(400).json(createErrorResult("Invalid mandapId format"));
+    }
 
     const mandap = await mandapModel.findById(mandapId);
-    if (!mandap)
+    if (!mandap) {
       return res.status(404).json(createErrorResult("Mandap not found"));
+    }
 
-    await reviewModel.create({
+    // Validate bookingId if provided
+    if (bookingId) {
+      if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+        return res
+          .status(400)
+          .json(createErrorResult("Invalid bookingId format"));
+      }
+      const booking = await bookingModel.findById(bookingId);
+      if (!booking) {
+        return res.status(404).json(createErrorResult("Booking not found"));
+      }
+      if (booking.userId.toString() !== req.user._id.toString()) {
+        return res
+          .status(403)
+          .json(
+            createErrorResult("Unauthorized to add review for this booking")
+          );
+      }
+    }
+
+    // Create the review
+    const review = await reviewModel.create({
       userId: req.user._id,
       mandapId,
       rating,
       comment,
     });
 
+    // Update the booking to set isReviewAdded to true
+    if (bookingId) {
+      await bookingModel.findByIdAndUpdate(
+        bookingId,
+        { $set: { isReviewAdded: true } },
+        { new: true, runValidators: true }
+      );
+    }
+
+    // Create notification for provider
+    const provider = await mandapModel
+      .findById(mandapId)
+      .select("providerId")
+      .lean();
+    if (provider) {
+      const notificationData = {
+        recipientId: provider.providerId,
+        recipientModel: "Providers",
+        type: "new_review",
+        title: "New Review Added",
+        message: `A new review for mandap ${mandapId} has been added by user ${req.user._id}.`,
+        relatedId: review._id,
+        relatedModel: "Reviews",
+        isRead: false,
+        createdAt: new Date(),
+      };
+
+      await notificationModel.create(notificationData);
+      req.io.to(provider.providerId.toString()).emit("new_review", {
+        ...notificationData,
+        id: review._id,
+        read: false,
+      });
+    }
+
     return res
       .status(201)
       .json(createSuccessResult({ message: "Review added successfully" }));
   } catch (error) {
+    console.error("Error adding review:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };

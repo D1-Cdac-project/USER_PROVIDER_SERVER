@@ -62,13 +62,11 @@ exports.createMandap = async (req, res) => {
     const trimmedMandapName =
       typeof mandapName === "string" ? mandapName.trim() : mandapName;
     const trimmedMandapDesc =
-      typeof mandapDesc === "string" ? mandapDesc.trim() : mandapDesc; // Added field
+      typeof mandapDesc === "string" ? mandapDesc.trim() : mandapDesc;
     const trimmedCity = typeof city === "string" ? city.trim() : city;
     const trimmedState = typeof state === "string" ? state.trim() : state;
     const trimmedPinCode =
       typeof pinCode === "string" ? pinCode.trim() : pinCode;
-    const trimmedVenueType =
-      typeof venueType === "string" ? venueType.trim() : venueType;
     const trimmedGuestCapacity =
       typeof guestCapacity === "string" ? guestCapacity.trim() : guestCapacity;
     const trimmedVenuePricing =
@@ -85,7 +83,7 @@ exports.createMandap = async (req, res) => {
       state: trimmedState,
       pinCode: trimmedPinCode,
       availableDates,
-      venueType: trimmedVenueType,
+      venueType,
       guestCapacity: trimmedGuestCapacity,
       venuePricing: trimmedVenuePricing,
     };
@@ -123,7 +121,7 @@ exports.createMandap = async (req, res) => {
     }
 
     const parsedAvailableDates = parseArrayOrString(availableDates);
-    const parsedVenueType = trimmedVenueType;
+    const parsedVenueType = parseArrayOrString(venueType);
     const parsedAmenities = parseArrayOrString(amenities);
     const parsedOutdoorFacilities = parseArrayOrString(outdoorFacilities);
     const parsedPaymentOptions = parseArrayOrString(paymentOptions);
@@ -154,13 +152,11 @@ exports.createMandap = async (req, res) => {
         );
     }
 
-    // Handle image uploads
     let venueImages = [];
     if (req.files && req.files.length > 0) {
       venueImages = req.files.map((file) => file.path);
     }
 
-    // Create address document
     const mandapAddress = await addressModel.create({
       state: trimmedState,
       city: trimmedCity,
@@ -168,7 +164,6 @@ exports.createMandap = async (req, res) => {
       fullAddress: trimmedFullAddress,
     });
 
-    // Create mandap document
     const mandap = await mandapModel.create({
       mandapName: trimmedMandapName,
       mandapDesc: trimmedMandapDesc,
@@ -194,43 +189,9 @@ exports.createMandap = async (req, res) => {
 
     return res
       .status(201)
-      .json(
-        createSuccessResult({ message: "Mandap created successfully", mandap })
-      );
+      .json(createSuccessResult({ message: "Mandap created successfully" }));
   } catch (error) {
     console.error("Error creating mandap:", error);
-    return res.status(500).json(createErrorResult(error.message));
-  }
-};
-
-// Fetches all mandaps for provider with authorization check
-exports.getAllMandapByProviderID = async (req, res) => {
-  if (!req.provider) {
-    return res
-      .status(400)
-      .json(createErrorResult("Invalid Request: Provider not authenticated"));
-  }
-  try {
-    const provider = await providerModel.findById(req.provider._id);
-    if (provider.authorizationStatus !== "approved") {
-      return res
-        .status(403)
-        .json(
-          createErrorResult("Unauthorized: Provider status must be approved")
-        );
-    }
-    const mandaps = await mandapModel
-      .find({ providerId: req.provider._id, isActive: true })
-      .populate("address")
-      .lean();
-    return res.status(200).json(
-      createSuccessResult({
-        message: "Mandaps fetched successfully",
-        mandaps,
-      })
-    );
-  } catch (error) {
-    console.error("Error fetching mandaps by provider ID:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
@@ -286,14 +247,11 @@ exports.updateMandap = async (req, res) => {
       advancePayment,
     } = req.body;
 
-    // Parse FormData inputs
     const parsedAvailableDates = availableDates
       ? parseArrayOrString(availableDates)
       : mandap.availableDates;
     const parsedVenueType = venueType
-      ? typeof venueType === "string"
-        ? venueType
-        : JSON.stringify(venueType)
+      ? parseArrayOrString(venueType)
       : mandap.venueType;
     const parsedAmenities = amenities
       ? parseArrayOrString(amenities)
@@ -305,7 +263,6 @@ exports.updateMandap = async (req, res) => {
       ? parseArrayOrString(paymentOptions)
       : mandap.paymentOptions;
 
-    // Validate date formats if provided
     if (
       parsedAvailableDates.length &&
       !parsedAvailableDates.every((date) => !isNaN(new Date(date).getTime()))
@@ -315,7 +272,6 @@ exports.updateMandap = async (req, res) => {
         .json(createErrorResult("Invalid date format in availableDates"));
     }
 
-    // Handle address updates
     let addressId = mandap.address;
     const isAddressProvided = city || state || pinCode || fullAddress;
     if (isAddressProvided) {
@@ -345,7 +301,6 @@ exports.updateMandap = async (req, res) => {
       }
     }
 
-    // Handle image uploads
     let venueImages = mandap.venueImages;
     if (req.files && req.files.length > 0) {
       for (const imageUrl of mandap.venueImages) {
@@ -355,7 +310,6 @@ exports.updateMandap = async (req, res) => {
       venueImages = req.files.map((file) => file.path);
     }
 
-    // Update mandap document
     const updatedMandap = await mandapModel
       .findByIdAndUpdate(
         mandapId,
@@ -394,7 +348,6 @@ exports.updateMandap = async (req, res) => {
     return res.status(200).json(
       createSuccessResult({
         message: "Mandap updated successfully",
-        mandap: updatedMandap,
       })
     );
   } catch (error) {
@@ -402,7 +355,6 @@ exports.updateMandap = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
-
 // Soft deletes a mandap with authorization check
 exports.deleteMandap = async (req, res) => {
   if (!req.provider) {
@@ -441,6 +393,38 @@ exports.deleteMandap = async (req, res) => {
       .json(createSuccessResult({ message: "Mandap deleted successfully" }));
   } catch (error) {
     console.error("Error deleting mandap:", error);
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
+
+// Fetches all mandaps for provider with authorization check
+exports.getAllMandapByProviderID = async (req, res) => {
+  if (!req.provider) {
+    return res
+      .status(400)
+      .json(createErrorResult("Invalid Request: Provider not authenticated"));
+  }
+  try {
+    const provider = await providerModel.findById(req.provider._id);
+    if (provider.authorizationStatus !== "approved") {
+      return res
+        .status(403)
+        .json(
+          createErrorResult("Unauthorized: Provider status must be approved")
+        );
+    }
+    const mandaps = await mandapModel
+      .find({ providerId: req.provider._id, isActive: true })
+      .populate("address")
+      .lean();
+    return res.status(200).json(
+      createSuccessResult({
+        message: "Mandaps fetched successfully",
+        mandaps,
+      })
+    );
+  } catch (error) {
+    console.error("Error fetching mandaps by provider ID:", error);
     return res.status(500).json(createErrorResult(error.message));
   }
 };
@@ -490,7 +474,9 @@ exports.searchMandap = async (req, res) => {
         .distinct("_id");
     }
     if (venueType) {
-      searchCriteria.venueType = venueType;
+      searchCriteria.venueType = {
+        $in: Array.isArray(venueType) ? venueType : [venueType],
+      };
     }
     if (minPrice || maxPrice) {
       searchCriteria.venuePricing = {
@@ -523,9 +509,9 @@ exports.getMandapByFilter = async (req, res) => {
         .distinct("_id");
     }
     if (venueType) {
-      filterCriteria.venueType = Array.isArray(venueType)
-        ? { $in: venueType }
-        : venueType;
+      filterCriteria.venueType = {
+        $in: Array.isArray(venueType) ? venueType : [venueType],
+      };
     }
     if (minPrice || maxPrice) {
       filterCriteria.venuePricing = {
