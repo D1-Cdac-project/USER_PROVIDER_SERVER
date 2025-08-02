@@ -41,10 +41,12 @@ const {
 const {
   getPhotographerByMandapId,
   getAllPhotographers,
+  getPhotographerById,
 } = require("../controllers/photographerController");
 const {
   getRoomByMandapId,
   getAllRooms,
+  getRoomById,
 } = require("../controllers/roomController");
 const {
   addReview,
@@ -95,10 +97,12 @@ router.get("/caterers/:mandapId", getAllCaterersByMandapId);
 // photographer
 router.get("/photographers/:mandapId", getPhotographerByMandapId);
 router.get("/photographers", getAllPhotographers);
+router.get("/get-photographer/:photographerId", getPhotographerById);
 
 // rooms
 router.get("/rooms/:mandapId", getRoomByMandapId);
 router.get("/rooms", getAllRooms);
+router.get("/get-room/:roomId", getRoomById);
 
 //reviews
 router.post("/add-review", isUser, addReview);

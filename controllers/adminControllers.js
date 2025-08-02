@@ -4,6 +4,7 @@ const generateToken = require("../config/generateToken");
 const {
   sendRegistrationEmail,
   sendApprovalEmail,
+  sendRejectionEmail,
 } = require("../config/mailer");
 const adminModel = require("../models/adminModel");
 const approvalRequestModel = require("../models/approvalRequestModel");
@@ -189,6 +190,7 @@ exports.handleApprovalRequest = async (req, res, io) => {
         message: "Your account has been approved!",
       });
     } else {
+      await sendRejectionEmail(provider.email, provider.name);
       io.to(providerId.toString()).emit("approvalStatusUpdate", {
         status: "rejected",
         message: "Your account approval request was rejected.",
