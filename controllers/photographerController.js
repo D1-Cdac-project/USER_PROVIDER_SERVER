@@ -1,8 +1,6 @@
 const mongoose = require("mongoose");
-
 const { cloudinary } = require("../config/cloudinary");
 const { createErrorResult, createSuccessResult } = require("../config/result");
-
 const mandapModel = require("../models/mandapModel");
 const photographerModel = require("../models/photographerModel");
 
@@ -14,7 +12,7 @@ exports.addPhotographer = async (req, res) => {
       .json(createErrorResult("Invalid Request: Provider not authenticated"));
   }
   try {
-    const { mandapId, photographerName, photographyTypes, printOption } =
+    const { mandapId, photographerName, photographyTypes, printOption, about } =
       req.body;
 
     // Validate mandapId
@@ -111,13 +109,49 @@ exports.addPhotographer = async (req, res) => {
       }
     }
 
-    // Handle image upload for sampleWork
-    let sampleWork = [];
-    if (req.files && req.files.length > 0) {
-      sampleWork = req.files.map((file) => file.path);
+    // Handle profile image upload
+    let profileImage = "";
+    if (
+      Array.isArray(req.files) &&
+      req.files.some((file) => file.fieldname === "profileImage")
+    ) {
+      const profileFile = req.files.find(
+        (file) => file.fieldname === "profileImage"
+      );
+      const result = await cloudinary.uploader.upload(profileFile.path, {
+        folder: "BookMyMandap",
+        resource_type: "image",
+      });
+      profileImage = result.secure_url;
+    } else if (req.files && req.files.profileImage) {
+      const result = await cloudinary.uploader.upload(
+        req.files.profileImage[0].path,
+        {
+          folder: "BookMyMandap",
+          resource_type: "image",
+        }
+      );
+      profileImage = result.secure_url;
     }
 
-    // Assign sampleWork to each photographyType
+    // Handle image upload for sampleWork
+    let sampleWork = [];
+    const sampleWorkFiles = Array.isArray(req.files)
+      ? req.files.filter((file) => file.fieldname === "sampleWork")
+      : req.files && req.files.sampleWork
+      ? req.files.sampleWork
+      : [];
+    if (sampleWorkFiles.length > 0) {
+      sampleWork = await Promise.all(
+        sampleWorkFiles.map((file) =>
+          cloudinary.uploader.upload(file.path, {
+            folder: "BookMyMandap",
+            resource_type: "auto", // Allow images and videos
+          })
+        )
+      ).then((results) => results.map((result) => result.secure_url));
+    }
+
     const updatedPhotographyTypes = parsedPhotographyTypes.map((type) => ({
       ...type,
       sampleWork: sampleWork.length > 0 ? sampleWork : type.sampleWork || [],
@@ -126,6 +160,8 @@ exports.addPhotographer = async (req, res) => {
     await photographerModel.create({
       mandapId,
       photographerName,
+      profileImage,
+      about: about || "",
       photographyTypes: updatedPhotographyTypes,
       printOption: parsedPrintOption,
     });
@@ -141,8 +177,9 @@ exports.addPhotographer = async (req, res) => {
   }
 };
 
-// // Updates a photographer with Cloudinary image handling
+// Updates a photographer with Cloudinary image handling
 exports.updatePhotographer = async (req, res) => {
+  console.log("req.files:", req.files); // Debug log
   if (!req.provider) {
     return res
       .status(400)
@@ -150,7 +187,7 @@ exports.updatePhotographer = async (req, res) => {
   }
   try {
     const { photographerId } = req.params;
-    const { mandapId, photographerName, photographyTypes, printOption } =
+    const { mandapId, photographerName, photographyTypes, printOption, about } =
       req.body;
 
     const photographer = await photographerModel.findById(photographerId);
@@ -261,11 +298,57 @@ exports.updatePhotographer = async (req, res) => {
       }
     }
 
+    // Handle profile image update
+    let profileImage = photographer.profileImage || "";
+    if (
+      Array.isArray(req.files) &&
+      req.files.some((file) => file.fieldname === "profileImage")
+    ) {
+      // Delete existing profile image from Cloudinary
+      if (photographer.profileImage) {
+        const publicId = photographer.profileImage
+          .split("/")
+          .pop()
+          .split(".")[0];
+        await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+      }
+      const profileFile = req.files.find(
+        (file) => file.fieldname === "profileImage"
+      );
+      const result = await cloudinary.uploader.upload(profileFile.path, {
+        folder: "BookMyMandap",
+        resource_type: "image",
+      });
+      profileImage = result.secure_url;
+    } else if (req.files && req.files.profileImage) {
+      // Handle case where upload.fields stores files as an object
+      if (photographer.profileImage) {
+        const publicId = photographer.profileImage
+          .split("/")
+          .pop()
+          .split(".")[0];
+        await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
+      }
+      const result = await cloudinary.uploader.upload(
+        req.files.profileImage[0].path,
+        {
+          folder: "BookMyMandap",
+          resource_type: "image",
+        }
+      );
+      profileImage = result.secure_url;
+    }
+
     // Handle image update for sampleWork
     let sampleWork = parsedPhotographyTypes.flatMap(
       (type) => type.sampleWork || []
     );
-    if (req.files && req.files.length > 0) {
+    const sampleWorkFiles = Array.isArray(req.files)
+      ? req.files.filter((file) => file.fieldname === "sampleWork")
+      : req.files && req.files.sampleWork
+      ? req.files.sampleWork
+      : [];
+    if (sampleWorkFiles.length > 0) {
       // Delete existing images from Cloudinary
       for (const imageUrl of photographer.photographyTypes.flatMap(
         (type) => type.sampleWork || []
@@ -276,9 +359,10 @@ exports.updatePhotographer = async (req, res) => {
         }
       }
       sampleWork = await Promise.all(
-        req.files.map((file) =>
+        sampleWorkFiles.map((file) =>
           cloudinary.uploader.upload(file.path, {
             folder: "BookMyMandap",
+            resource_type: "auto",
           })
         )
       ).then((results) => results.map((result) => result.secure_url));
@@ -315,6 +399,8 @@ exports.updatePhotographer = async (req, res) => {
       {
         mandapId: updatedMandapId,
         photographerName: photographerName || photographer.photographerName,
+        profileImage,
+        about: about !== undefined ? about : photographer.about,
         photographyTypes: updatedPhotographyTypes,
         printOption: parsedPrintOption,
         isActive: true,
@@ -365,6 +451,11 @@ exports.deletePhotographer = async (req, res) => {
         const publicId = imageUrl.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
       }
+    }
+    // Delete profile image from Cloudinary
+    if (photographer.profileImage) {
+      const publicId = photographer.profileImage.split("/").pop().split(".")[0];
+      await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
     }
 
     await photographerModel.findByIdAndUpdate(photographerId, {
