@@ -38,6 +38,9 @@ const userSchema = new mongoose.Schema(
         ref: "Mandaps",
       },
     ],
+    profileImage: {
+      type: String,
+    },
     isActive: {
       type: Boolean,
       default: true,

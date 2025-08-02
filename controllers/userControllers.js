@@ -10,6 +10,7 @@ const { sendRegistrationEmail } = require("../config/mailer");
 const adminModel = require("../models/adminModel");
 const notificationModel = require("../models/notificationModel");
 const userModel = require("../models/userModel");
+const { cloudinary } = require("../config/cloudinary");
 
 //registration of new user
 exports.registerUser = async (req, res, io) => {
@@ -117,36 +118,59 @@ exports.updateProfile = async (req, res) => {
   try {
     const { fullName, email, phoneNumber, password, address } = req.body;
     const update = {};
+
     if (fullName) update.fullName = fullName;
     if (email) update.email = email;
     if (phoneNumber) update.phoneNumber = phoneNumber;
+
+    // Handle address
     if (address) {
       let addressDoc;
+
+      const isFullAddressValid =
+        address.fullAddress && typeof address.fullAddress === "string";
+
       if (
         typeof address === "object" &&
         address.state &&
         address.city &&
-        address.pinCode
+        address.pinCode &&
+        isFullAddressValid
       ) {
-        // Create or find an address
+        // Create or find address with full data
         addressDoc = await mongoose.model("Address").findOne(address);
+
         if (!addressDoc) {
           addressDoc = await mongoose.model("Address").create({
             ...address,
-            fullAddress: address.fullAddress || "",
           });
         }
+
         update.address = addressDoc._id;
       } else if (mongoose.isValidObjectId(address)) {
         update.address = address;
       } else {
         return res
           .status(400)
-          .json(createErrorResult("Invalid address ID or format"));
+          .json(
+            createErrorResult(
+              "Invalid address ID or format. Please include state, city, pinCode, and fullAddress."
+            )
+          );
       }
     }
+
+    // Handle password
     if (password) {
       update.password = await bcrypt.hash(password, 10);
+    }
+
+    // Handle profile image upload to Cloudinary
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: "BookMyMandap",
+      });
+      update.profileImage = result.secure_url;
     }
 
     const user = await userModel
@@ -184,15 +208,14 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
-
-exports.aboutUsEmailSender=async(req,res)=>{
+exports.aboutUsEmailSender = async (req, res) => {
   const { name, email, message } = req.body;
 
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
-        host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT,
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -213,4 +236,4 @@ exports.aboutUsEmailSender=async(req,res)=>{
     console.error("Email error:", error);
     res.status(500).json({ success: false, message: "Email sending failed" });
   }
-}
+};
