@@ -54,6 +54,7 @@ const {
   getReviewByMandapId,
   updateReviewById,
   deleteReviewById,
+  getMandapRatingsSummary,
 } = require("../controllers/reviewController");
 
 const router = express.Router();
@@ -105,6 +106,7 @@ router.get("/rooms", getAllRooms);
 router.get("/get-room/:roomId", getRoomById);
 
 //reviews
+router.get("/reviews/mandap-rating-summary", isUser, getMandapRatingsSummary);
 router.post("/add-review", isUser, addReview);
 router.get("/review/:reviewId", isUser, getReviewById);
 router.get("/reviews/:mandapId", getReviewByMandapId);
