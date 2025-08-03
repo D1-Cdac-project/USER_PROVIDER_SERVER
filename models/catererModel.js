@@ -26,6 +26,11 @@ const catererSchema = new mongoose.Schema(
               type: String,
               required: true,
             },
+            itemType: {
+              type: String,
+              enum: ["Starter", "Main Course", "Dessert"],
+              required: true,
+            },
             itemPrice: {
               type: Number,
             },
@@ -47,7 +52,6 @@ const catererSchema = new mongoose.Schema(
         required: true,
       },
     ],
-
     isCustomizable: {
       type: Boolean,
       default: false,
@@ -56,6 +60,10 @@ const catererSchema = new mongoose.Schema(
       {
         itemName: {
           type: String,
+        },
+        itemType: {
+          type: String,
+          enum: ["Starter", "Main Course", "Dessert"],
         },
         itemPrice: {
           type: Number,
