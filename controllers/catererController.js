@@ -488,11 +488,6 @@ exports.getAllCaterer = async (req, res) => {
 };
 
 exports.getCatererById = async (req, res) => {
-  if (!req.provider) {
-    return res
-      .status(400)
-      .json(createErrorResult("Invalid Request: Provider not authenticated"));
-  }
   try {
     const { catererId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(catererId)) {
@@ -506,7 +501,6 @@ exports.getCatererById = async (req, res) => {
     }
     const mandap = await mandapModel.findOne({
       _id: caterer.mandapId,
-      providerId: req.provider._id,
     });
     if (!mandap) {
       return res
