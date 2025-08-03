@@ -206,3 +206,23 @@ exports.getAllReviewsByProviderId = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+// Get average rating and total reviews for all mandaps
+exports.getMandapRatingsSummary = async (req, res) => {
+  try {
+    const summary = await reviewModel.aggregate([
+      { $match: { isActive: true } },
+      {
+        $group: {
+          _id: "$mandapId",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+
+    return res.status(200).json(createSuccessResult({ summary }));
+  } catch (error) {
+    return res.status(500).json(createErrorResult(error.message));
+  }
+};
