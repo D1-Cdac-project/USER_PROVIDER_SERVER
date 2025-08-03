@@ -7,11 +7,12 @@ const catererSchema = new mongoose.Schema(
       ref: "Mandaps",
       required: true,
     },
-
     catererName: {
       type: String,
       required: true,
     },
+    about: { type: String, required: true },
+    profileImage: { type: String },
     menuCategory: [
       {
         category: {

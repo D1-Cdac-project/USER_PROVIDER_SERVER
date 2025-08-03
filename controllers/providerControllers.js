@@ -9,6 +9,7 @@ const adminModel = require("../models/adminModel");
 const notificationModel = require("../models/notificationModel");
 const providerModel = require("../models/providerModel");
 const userModel = require("../models/userModel");
+const { cloudinary } = require("../config/cloudinary");
 
 // Registers a new provider with approval request
 exports.registerProvider = async (req, res, io) => {

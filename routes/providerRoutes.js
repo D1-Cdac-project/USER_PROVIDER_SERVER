@@ -56,7 +56,7 @@ router.get("/profile", isProvider, getProviderProfile);
 router.put(
   "/update-profile",
   isProvider,
-  upload.single("providerLogo"),
+  upload.single("profileImage"),
   updateProvider
 );
 
@@ -84,17 +84,24 @@ router.put(
 router.delete("/delete-mandap/:mandapId", isProvider, deleteMandap);
 
 //photographer
+router.get("/get-all-photographers", isProvider, getAllPhotographers);
 router.post(
   "/add-photographer",
   isProvider,
-  upload.array("sampleWork", 10),
+  upload.fields([
+    { name: "sampleWork", maxCount: 10 },
+    { name: "profileImage", maxCount: 1 },
+  ]),
   addPhotographer
 );
 router.get("/get-all-photographers", isProvider, getAllPhotographers);
 router.put(
   "/update-photographer/:photographerId",
   isProvider,
-  upload.array("sampleWork", 10),
+  upload.fields([
+    { name: "sampleWork", maxCount: 10 },
+    { name: "profileImage", maxCount: 1 },
+  ]),
   updatePhotographer
 );
 router.delete(
@@ -113,13 +120,25 @@ router.get(
 router.post(
   "/add-caterer",
   isProvider,
-  upload.array("categoryImage[]", 10),
+  upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "categoryImage[0]", maxCount: 1 },
+    { name: "categoryImage[1]", maxCount: 1 },
+    { name: "categoryImage[2]", maxCount: 1 },
+    { name: "categoryImage[3]", maxCount: 1 },
+  ]),
   addCaterer
 );
 router.put(
   "/update-caterer/:catererId",
   isProvider,
-  upload.array("categoryImage[]", 10),
+  upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "categoryImage[0]", maxCount: 1 },
+    { name: "categoryImage[1]", maxCount: 1 },
+    { name: "categoryImage[2]", maxCount: 1 },
+    { name: "categoryImage[3]", maxCount: 1 },
+  ]),
   updateCaterer
 );
 router.delete("/delete-caterer/:catererId", isProvider, deleteCaterer);
