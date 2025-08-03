@@ -349,7 +349,7 @@ exports.updateCaterer = async (req, res) => {
         }
         if (
           !category.menuItems.every(
-            (item) => item.itemName && item.itemPrice !== undefined
+            (item) => item.itemName && item.itemPrice && item.itemType !== undefined
           )
         ) {
           return res
@@ -420,7 +420,7 @@ exports.updateCaterer = async (req, res) => {
             !Array.isArray(parsedCustomizableItems) ||
             parsedCustomizableItems.length === 0 ||
             !parsedCustomizableItems.every(
-              (item) => item.itemName && item.itemPrice !== undefined
+              (item) => item.itemName && item.itemPrice && item.itemType !== undefined
             )
           ) {
             return res
