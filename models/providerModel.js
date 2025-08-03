@@ -33,7 +33,7 @@ const providerSchema = new mongoose.Schema(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    providerLogo: {
+    profileImage: {
       type: String,
     },
     isActive: {

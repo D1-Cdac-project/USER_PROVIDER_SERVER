@@ -13,9 +13,8 @@ const photographerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    image: {
-      type: String, 
-      required: false,
+    profileImage: {
+      type: String,
     },
     about: {
       type: String,
