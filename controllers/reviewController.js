@@ -207,7 +207,7 @@ exports.getAllReviewsByProviderId = async (req, res) => {
   }
 };
 
-// Get average rating and total reviews for all mandaps
+// get rating average and total no. of reviews for all mandaps (returns array)
 exports.getMandapRatingsSummary = async (req, res) => {
   try {
     const summary = await reviewModel.aggregate([
@@ -226,3 +226,45 @@ exports.getMandapRatingsSummary = async (req, res) => {
     return res.status(500).json(createErrorResult(error.message));
   }
 };
+
+// get rating average and total no. of reviews for one mandap
+exports.getRatingSummaryByMandapId = async (req, res) => {
+  try {
+    const { mandapId } = req.params;
+
+    const summary = await reviewModel.aggregate([
+      {
+        $match: {
+          mandapId: new mongoose.Types.ObjectId(mandapId),
+          isActive: true,
+        },
+      },
+      {
+        $group: {
+          _id: "$mandapId",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 },
+        },
+      },
+    ]);
+
+    if (summary.length === 0) {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          averageRating: 0,
+          totalReviews: 0,
+        },
+      });
+    }
+
+    return res.status(200).json({
+      status: "success",
+      data: summary[0],
+    });
+  } catch (error) {
+    console.error("Error fetching rating summary:", error);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+};
+

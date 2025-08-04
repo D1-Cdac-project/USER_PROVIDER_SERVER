@@ -10,7 +10,12 @@ exports.getAllFavoriteMandaps = async (req, res) => {
       return res.status(400).json(createErrorResult("Invalid Request"));
     const user = await userModel
       .findById(req.user._id)
-      .populate("favoriteMandaps");
+      .populate({
+        path: "favoriteMandaps",
+        populate: {
+          path: "address",
+        },
+      });
     if (!user) return res.status(404).json(createErrorResult("User not found"));
     return res
       .status(200)
