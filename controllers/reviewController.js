@@ -233,14 +233,19 @@ exports.getRatingSummaryByMandapId = async (req, res) => {
     const { mandapId } = req.params;
 
     const summary = await reviewModel.aggregate([
-      { $match: { mandapId: new mongoose.Types.ObjectId(mandapId), } },
+      {
+        $match: {
+          mandapId: new mongoose.Types.ObjectId(mandapId),
+          isActive: true,
+        },
+      },
       {
         $group: {
           _id: "$mandapId",
           averageRating: { $avg: "$rating" },
-          totalReviews: { $sum: 1 }
-        }
-      }
+          totalReviews: { $sum: 1 },
+        },
+      },
     ]);
 
     if (summary.length === 0) {
@@ -248,14 +253,14 @@ exports.getRatingSummaryByMandapId = async (req, res) => {
         status: "success",
         data: {
           averageRating: 0,
-          totalReviews: 0
-        }
+          totalReviews: 0,
+        },
       });
     }
 
     return res.status(200).json({
       status: "success",
-      data: summary[0]
+      data: summary[0],
     });
   } catch (error) {
     console.error("Error fetching rating summary:", error);
