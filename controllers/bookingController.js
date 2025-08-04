@@ -5,7 +5,6 @@ const catererModel = require("../models/catererModel");
 const mandapModel = require("../models/mandapModel");
 const photographerModel = require("../models/photographerModel");
 const roomModel = require("../models/roomModel");
-const notificationModel = require("../models/notificationModel");
 
 // Adds a new booking with validation
 exports.addBooking = async (req, res) => {

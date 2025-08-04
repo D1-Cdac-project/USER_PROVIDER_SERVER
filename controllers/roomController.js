@@ -510,11 +510,6 @@ exports.getAllRooms = async (req, res) => {
 
 // Fetches a single room by ID
 exports.getRoomById = async (req, res) => {
-  if (!req.provider) {
-    return res
-      .status(400)
-      .json(createErrorResult("Invalid Request: Provider not authenticated"));
-  }
   try {
     const { roomId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
@@ -530,7 +525,6 @@ exports.getRoomById = async (req, res) => {
 
     const mandap = await mandapModel.findOne({
       _id: room.mandapId,
-      providerId: req.provider._id,
     });
 
     if (!mandap) {
