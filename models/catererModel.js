@@ -29,7 +29,6 @@ const catererSchema = new mongoose.Schema(
             itemType: {
               type: String,
               enum: ["Starter", "Main Course", "Dessert"],
-              required: true,
             },
             itemPrice: {
               type: Number,
