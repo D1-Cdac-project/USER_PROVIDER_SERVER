@@ -91,16 +91,10 @@ exports.addCaterer = async (req, res) => {
           .status(400)
           .json(createErrorResult("Invalid or missing menuCategory fields"));
       }
-      if (
-        !category.menuItems.every(
-          (item) => item.itemName && item.itemPrice !== undefined
-        )
-      ) {
+      if (!category.menuItems.every((item) => item.itemName !== undefined)) {
         return res
           .status(400)
-          .json(
-            createErrorResult("Each menuItem must have itemName and itemPrice")
-          );
+          .json(createErrorResult("Each menuItem must have itemName "));
       }
     }
 
@@ -349,16 +343,12 @@ exports.updateCaterer = async (req, res) => {
         }
         if (
           !category.menuItems.every(
-            (item) => item.itemName && item.itemPrice && item.itemType !== undefined
+            (item) => item.itemName && item.itemType !== undefined
           )
         ) {
           return res
             .status(400)
-            .json(
-              createErrorResult(
-                "Each menuItem must have itemName and itemPrice"
-              )
-            );
+            .json(createErrorResult("Each menuItem must have itemName "));
         }
       }
     }
@@ -420,7 +410,8 @@ exports.updateCaterer = async (req, res) => {
             !Array.isArray(parsedCustomizableItems) ||
             parsedCustomizableItems.length === 0 ||
             !parsedCustomizableItems.every(
-              (item) => item.itemName && item.itemPrice && item.itemType !== undefined
+              (item) =>
+                item.itemName && item.itemPrice && item.itemType !== undefined
             )
           ) {
             return res
