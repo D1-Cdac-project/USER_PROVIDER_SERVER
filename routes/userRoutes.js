@@ -9,6 +9,7 @@ const {
   getUserDetails,
   updateProfile,
   aboutUsEmailSender,
+  contactUsEmailSender,
 } = require("../controllers/userControllers");
 
 const {
@@ -71,9 +72,10 @@ router.put(
   upload.single("profileImage"),
   updateProfile
 );
-router.post("/send", isUser,aboutUsEmailSender);
+router.post("/send", aboutUsEmailSender);
+router.post("/contact-send", contactUsEmailSender);
 
-// add favourite mandap api's 
+// add favourite mandap api's
 router.post("/add-favorite-mandap", isUser, addFavoriteMandap);
 router.get("/favourite-mandaps", isUser, getAllFavoriteMandaps);
 router.delete("/favourite-mandap/:mandapId", isUser, deleteFavoriteMandap);
