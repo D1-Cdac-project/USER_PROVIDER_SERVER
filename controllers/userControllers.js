@@ -237,3 +237,42 @@ exports.aboutUsEmailSender = async (req, res) => {
     res.status(500).json({ success: false, message: "Email sending failed" });
   }
 };
+
+exports.contactUsEmailSender = async (req, res) => {
+  const { name, email, phone, subject, message } = req.body;
+  console.log("Contact Us Email Data:", {
+    name,
+    email,
+    phone,
+    subject,
+    message,
+  });
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"${name}" <${email}>`,
+      to: process.env.EMAIL_TO || process.env.EMAIL_USER,
+      subject: "New Contact Form Submission",
+      html: `<p><strong>Name:</strong> ${name}</p>
+             <p><strong>Email:</strong> ${email}</p>
+             <p><strong>Phone:</strong> ${phone}</p>
+             <p><strong>Subject:</strong> ${subject}</p>
+             <p><strong>Message:</strong><br>${message}</p>`,
+    });
+
+    res.status(200).json({ success: true, message: "Email sent successfully" });
+  } catch (error) {
+    console.error("Email error:", error);
+    res.status(500).json({ success: false, message: "Email sending failed" });
+  }
+};
