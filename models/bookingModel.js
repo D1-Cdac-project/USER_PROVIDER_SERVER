@@ -5,10 +5,12 @@ const bookingSchema = new mongoose.Schema(
     mandapId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Mandaps",
+      required: true,
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Users",
+      required: true,
     },
     orderDates: [
       {
@@ -38,12 +40,18 @@ const bookingSchema = new mongoose.Schema(
     },
     amountPaid: {
       type: Number,
+      default: 0,
+    },
+    paymentId: {
+      type: String,
+      default: null,
     },
     paymentStatus: {
       type: String,
       enum: ["Partial", "Completed", "Cancelled"],
+      default: "Partial",
     },
-    isReviewAdded:{
+    isReviewAdded: {
       type: Boolean,
       default: false,
     },

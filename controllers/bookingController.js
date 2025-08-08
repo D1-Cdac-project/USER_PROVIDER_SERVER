@@ -13,223 +13,173 @@ exports.addBooking = async (req, res) => {
     const {
       mandapId,
       orderDates,
+      photographer = [],
+      caterer = [],
+      room = null,
+      totalAmount,
+      amountPaid,
+      paymentId,
+    } = req.body;
+    const userId = req.user?._id;
+
+    console.log("Received booking data:", {
+      mandapId,
+      orderDates,
       photographer,
       caterer,
       room,
       totalAmount,
       amountPaid,
-    } = req.body;
-    const userId = req.user?._id;
+      paymentId,
+      userId,
+    });
 
-    // Validate user authentication
     if (!userId) {
       return res.status(401).json(createErrorResult("User not authenticated"));
     }
 
-    // Validate required fields
-    if (
-      !mandapId ||
-      !orderDates ||
-      !Array.isArray(orderDates) ||
-      orderDates.length === 0 ||
-      totalAmount === undefined ||
-      isNaN(totalAmount) ||
-      totalAmount < 0
-    ) {
+    if (!mandapId || !orderDates || !totalAmount || !amountPaid) {
       return res
         .status(400)
-        .json(createErrorResult("Invalid request parameters"));
+        .json(createErrorResult("Required fields are missing"));
     }
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(mandapId)) {
-      return res.status(400).json(createErrorResult("Invalid ID format"));
+    if (!mongoose.isValidObjectId(mandapId)) {
+      return res.status(400).json(createErrorResult("Invalid mandap ID"));
     }
 
-    // Check mandap existence and activity
+    if (
+      (photographer && !photographer.every(mongoose.isValidObjectId)) ||
+      (caterer && !caterer.every(mongoose.isValidObjectId)) ||
+      (room && !mongoose.isValidObjectId(room))
+    ) {
+      return res.status(400).json(createErrorResult("Invalid service ID(s)"));
+    }
+
     const mandap = await mandapModel
       .findOne({ _id: mandapId, isActive: true })
       .lean();
+    console.log("Mandap found:", !!mandap);
     if (!mandap) {
-      return res
-        .status(404)
-        .json(createErrorResult("Mandap not found or inactive"));
+      return res.status(404).json(createErrorResult("Mandap not found"));
     }
 
-    // Validate dates
-    const dates = orderDates.map((date) => new Date(date));
-    if (dates.some((date) => isNaN(date.getTime()))) {
-      return res
-        .status(400)
-        .json(createErrorResult("Invalid date format in orderDates"));
-    }
-
-    const mandapDates = mandap.availableDates.map(
+    const dates = orderDates.map(
       (date) => new Date(date).toISOString().split("T")[0]
     );
-    if (
-      !dates.every((date) =>
-        mandapDates.includes(date.toISOString().split("T")[0])
-      )
-    ) {
+    const availableDates = mandap.availableDates.map(
+      (date) => new Date(date).toISOString().split("T")[0]
+    );
+    const invalidDates = dates.filter(
+      (orderDate) => !availableDates.includes(orderDate)
+    );
+    if (invalidDates.length > 0) {
       return res
         .status(400)
         .json(
-          createErrorResult("Selected dates are not available for this mandap")
+          createErrorResult(`Dates not available: ${invalidDates.join(", ")}`)
         );
     }
 
-    // Check for duplicate bookings
-    const existingBookings = await bookingModel
-      .find({
-        userId,
+    const existingBooking = await bookingModel
+      .findOne({
         mandapId,
+        userId,
+        orderDates: { $in: dates },
         isActive: true,
-        orderDates: { $in: dates.map((d) => d.toISOString().split("T")[0]) },
       })
       .lean();
-    if (existingBookings.length > 0) {
+    if (existingBooking) {
       return res
         .status(400)
-        .json(
-          createErrorResult(
-            "You already have a booking for this mandap on the selected dates"
-          )
-        );
+        .json(createErrorResult("Duplicate booking found for these dates"));
     }
 
-    // Validate photographers
-    if (photographer && photographer.length > 0) {
-      if (photographer.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
-        return res.status(400).json(createErrorResult("Invalid ID format"));
-      }
-      const photographers = await photographerModel
-        .find({ _id: { $in: photographer }, isActive: true })
+    if (photographer?.length) {
+      const validPhotographer = await photographerModel
+        .find({ _id: { $in: photographer }, mandapId })
         .lean();
-      if (
-        photographers.length !== photographer.length ||
-        !photographers.every(
-          (p) =>
-            p.mandapId &&
-            p.mandapId.length > 0 &&
-            p.mandapId.some((id) => id.toString() === mandapId)
-        )
-      ) {
+      if (validPhotographer.length !== photographer.length) {
         return res
           .status(400)
-          .json(
-            createErrorResult(
-              "One or more photographers not associated with this mandap"
-            )
-          );
+          .json(createErrorResult("Invalid photographer selected"));
       }
     }
 
-    // Validate caterers
-    if (caterer && caterer.length > 0) {
-      if (caterer.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
-        return res.status(400).json(createErrorResult("Invalid ID format"));
-      }
-      const caterers = await catererModel
-        .find({ _id: { $in: caterer }, isActive: true })
+    if (caterer?.length) {
+      const validCaterer = await catererModel
+        .find({ _id: { $in: caterer }, mandapId })
         .lean();
-      if (
-        caterers.length !== caterer.length ||
-        !caterers.every((c) => c.mandapId && c.mandapId.toString() === mandapId)
-      ) {
+      if (validCaterer.length !== caterer.length) {
         return res
           .status(400)
-          .json(
-            createErrorResult(
-              "One or more caterers not associated with this mandap"
-            )
-          );
+          .json(createErrorResult("Invalid caterer selected"));
       }
     }
 
-    // Validate room
     if (room) {
-      if (!mongoose.Types.ObjectId.isValid(room)) {
-        return res.status(400).json(createErrorResult("Invalid ID format"));
-      }
-      const roomDoc = await roomModel
-        .findOne({ _id: room, mandapId, isActive: true })
-        .lean();
-      if (!roomDoc) {
-        return res
-          .status(400)
-          .json(createErrorResult("Room not associated with this mandap"));
+      const validRoom = await roomModel.findOne({ _id: room, mandapId }).lean();
+      if (!validRoom) {
+        return res.status(400).json(createErrorResult("Invalid room selected"));
       }
     }
 
-    // Set payment status
-    const paidAmount = Number(amountPaid) || 0;
-    if (isNaN(paidAmount) || paidAmount < 0) {
-      return res.status(400).json(createErrorResult("Invalid amountPaid"));
-    }
+    const updatedAvailableDates = mandap.availableDates
+      .filter(
+        (date) => !dates.includes(new Date(date).toISOString().split("T")[0])
+      )
+      .map((date) => new Date(date));
+
     const paymentStatus =
-      paidAmount === Number(totalAmount) ? "Completed" : "Partial";
+      Number(amountPaid) >= Number(totalAmount) ? "Completed" : "Partial";
 
-    // Update mandap available dates
-    const updatedAvailableDates = mandap.availableDates.filter(
-      (mandapDate) =>
-        !dates.some(
-          (orderDate) =>
-            new Date(mandapDate).toISOString().split("T")[0] ===
-            orderDate.toISOString().split("T")[0]
-        )
-    );
-    await mandapModel.findByIdAndUpdate(mandapId, {
-      $set: { availableDates: updatedAvailableDates },
-    });
-
-    // Create booking
     const booking = await bookingModel.create({
       mandapId,
       userId,
       orderDates: dates,
-      photographer: photographer || [],
-      caterer: caterer || [],
-      room: room || null,
+      photographer,
+      caterer,
+      room,
       totalAmount: Number(totalAmount),
-      amountPaid: paidAmount,
+      amountPaid: Number(amountPaid),
+      paymentId,
       paymentStatus,
     });
 
-    // Create notification for provider
-    const provider = await mandapModel
-      .findById(mandapId)
-      .select("providerId")
-      .lean();
-    if (provider) {
-      const notificationData = {
-        recipientId: provider.providerId,
-        recipientModel: "Providers",
-        type: "new_booking",
-        title: "New Booking Created",
-        message: `A new booking for mandap ${mandapId} has been created by user ${userId}.`,
-        relatedId: booking._id,
-        relatedModel: "Bookings",
-        isRead: false,
-        createdAt: new Date(),
-      };
+    await mandapModel.findByIdAndUpdate(mandapId, {
+      $set: { availableDates: updatedAvailableDates },
+    });
 
-      await notificationModel.create(notificationData);
-      req.io.to(provider.providerId.toString()).emit("new_booking", {
-        ...notificationData,
-        id: booking._id,
-        read: false,
-      });
+    if (req.io) {
+      const provider = await mandapModel
+        .findById(mandapId)
+        .select("providerId")
+        .lean();
+      if (provider) {
+        const notification = await notificationModel.create({
+          userId: provider.providerId,
+          message: `New booking for your mandap on ${dates.join(", ")}`,
+          type: "Booking",
+        });
+        req.io
+          .to(provider.providerId.toString())
+          .emit("notification", notification);
+      }
+    } else {
+      console.warn("Socket.io not initialized");
     }
 
-    return res.status(201).json(
-      createSuccessResult({
-        message: "Booking added successfully",
-        booking: booking.toObject(),
-      })
-    );
+    return res
+      .status(201)
+      .json(
+        createSuccessResult({ message: "Booking added successfully", booking })
+      );
   } catch (error) {
-    console.error("Error adding booking:", error);
+    console.error("Error adding booking:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
     if (error.name === "ValidationError") {
       return res.status(400).json(
         createErrorResult(
@@ -240,11 +190,16 @@ exports.addBooking = async (req, res) => {
       );
     }
     if (error.name === "CastError") {
-      return res.status(400).json(createErrorResult("Invalid ID format"));
+      return res
+        .status(400)
+        .json(createErrorResult(`Invalid ${error.path} ID`));
     }
-    return res.status(500).json(createErrorResult(error.message));
+    return res
+      .status(500)
+      .json(createErrorResult("Failed to create booking: " + error.message));
   }
 };
+
 // Soft deletes a booking by setting isActive to false
 exports.deleteBooking = async (req, res) => {
   try {
@@ -445,68 +400,74 @@ exports.updateBooking = async (req, res) => {
       updateData.orderDates = dates;
     }
 
-    if (photographer) {
-      if (photographer.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
-        return res.status(400).json(createErrorResult("Invalid ID format"));
-      }
-      const photographers = await photographerModel
-        .find({ _id: { $in: photographer }, isActive: true })
-        .lean();
-      if (
-        photographers.length !== photographer.length ||
-        !photographers.every(
-          (p) =>
-            p.mandapId &&
-            p.mandapId.length > 0 &&
-            p.mandapId.some((id) => id.toString() === booking.mandapId)
-        )
-      ) {
-        return res
-          .status(400)
-          .json(
-            createErrorResult(
-              "One or more photographers not associated with this mandap"
-            )
-          );
+    if (photographer !== undefined) {
+      if (photographer.length > 0) {
+        if (photographer.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+          return res.status(400).json(createErrorResult("Invalid ID format"));
+        }
+        const photographers = await photographerModel
+          .find({ _id: { $in: photographer }, isActive: true })
+          .lean();
+        if (
+          photographers.length !== photographer.length ||
+          !photographers.every(
+            (p) =>
+              p.mandapId &&
+              p.mandapId.length > 0 &&
+              p.mandapId.some((id) => id.toString() === booking.mandapId)
+          )
+        ) {
+          return res
+            .status(400)
+            .json(
+              createErrorResult(
+                "One or more photographers not associated with this mandap"
+              )
+            );
+        }
       }
       updateData.photographer = photographer;
     }
 
-    if (caterer) {
-      if (caterer.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
-        return res.status(400).json(createErrorResult("Invalid ID format"));
-      }
-      const caterers = await catererModel
-        .find({ _id: { $in: caterer }, isActive: true })
-        .lean();
-      if (
-        caterers.length !== caterer.length ||
-        !caterers.every(
-          (c) => c.mandapId && c.mandapId.toString() === booking.mandapId
-        )
-      ) {
-        return res
-          .status(400)
-          .json(
-            createErrorResult(
-              "One or more caterers not associated with this mandap"
-            )
-          );
+    if (caterer !== undefined) {
+      if (caterer.length > 0) {
+        if (caterer.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+          return res.status(400).json(createErrorResult("Invalid ID format"));
+        }
+        const caterers = await catererModel
+          .find({ _id: { $in: caterer }, isActive: true })
+          .lean();
+        if (
+          caterers.length !== caterer.length ||
+          !caterers.every(
+            (c) => c.mandapId && c.mandapId.toString() === booking.mandapId
+          )
+        ) {
+          return res
+            .status(400)
+            .json(
+              createErrorResult(
+                "One or more caterers not associated with this mandap"
+              )
+            );
+        }
       }
       updateData.caterer = caterer;
     }
 
-    if (room) {
-      if (!mongoose.Types.ObjectId.isValid(room)) {
-        return res.status(400).json(createErrorResult("Invalid ID format"));
-      }
-      const roomDoc = await roomModel
-        .findOne({ _id: room, mandapId: booking.mandapId, isActive: true })
-        .lean();
-      if (!roomDoc) {
-        return res
-          .status(400)
-          .json(createErrorResult("Room not associated with this mandap"));
+    if (room !== undefined) {
+      if (room) {
+        if (!mongoose.Types.ObjectId.isValid(room)) {
+          return res.status(400).json(createErrorResult("Invalid ID format"));
+        }
+        const roomDoc = await roomModel
+          .findOne({ _id: room, mandapId: booking.mandapId, isActive: true })
+          .lean();
+        if (!roomDoc) {
+          return res
+            .status(400)
+            .json(createErrorResult("Room not associated with this mandap"));
+        }
       }
       updateData.room = room;
     }
@@ -588,7 +549,7 @@ exports.updateBooking = async (req, res) => {
   }
 };
 
-// // Fetches all active bookings for provider’s mandaps
+// Fetches all active bookings for provider’s mandaps
 exports.getAllBookingsByProvider = async (req, res) => {
   try {
     if (!req.provider) {
@@ -793,7 +754,7 @@ exports.getBookingById = async (req, res) => {
 exports.completePayment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { paymentAmount } = req.body;
+    const { paymentAmount, paymentId } = req.body;
     const userId = req.user?._id;
     const providerId = req.provider?._id;
 
@@ -868,6 +829,7 @@ exports.completePayment = async (req, res) => {
         id,
         {
           amountPaid: booking.amountPaid + paymentAmount,
+          paymentId,
           paymentStatus: "Completed",
         },
         { new: true, runValidators: true }
