@@ -90,30 +90,23 @@ app.use((req, res, next) => {
 
 // Socket.IO connection handler
 io.on("connection", (socket) => {
-  console.log("New client connected:", socket.id);
-
   // Handling provider login to their room
   socket.on("joinProviderRoom", (providerId) => {
     socket.join(providerId);
-    console.log(`Provider ${providerId} joined their room`);
   });
 
   // Handling user login to their room
   socket.on("joinUserRoom", (userId) => {
     socket.join(userId);
-    console.log(`User ${userId} joined their room`);
   });
 
   // Handling admin login to their room
   socket.on("joinAdminRoom", (adminId) => {
     socket.join(adminId);
-    console.log(`Admin ${adminId} joined their room`);
   });
 
   // Handle client disconnection
-  socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
-  });
+  socket.on("disconnect", () => {});
 });
 
 // Define routes

@@ -73,26 +73,12 @@ exports.addRoom = async (req, res) => {
     }
 
     const { mandapId, AcRoom, NonAcRoom } = req.body;
-    console.log("addRoom - Destructuring req.body:", {
-      mandapId,
-      AcRoom,
-      NonAcRoom,
-    });
 
     if (!mongoose.Types.ObjectId.isValid(mandapId)) {
-      console.log("Invalid mandapId:", mandapId);
       return res.status(400).json(createErrorResult("Invalid mandapId format"));
     }
 
     const mandap = await mandapModel.findById(mandapId);
-    console.log(
-      "mandapId:",
-      mandapId,
-      "providerId:",
-      req.provider._id,
-      "mandap:",
-      mandap
-    );
 
     if (
       !mandap ||
@@ -433,7 +419,6 @@ exports.deleteRoom = async (req, res) => {
   try {
     const { roomId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(roomId)) {
-      console.log("Invalid roomId:", roomId);
       return res.status(400).json(createErrorResult("Invalid roomId"));
     }
 

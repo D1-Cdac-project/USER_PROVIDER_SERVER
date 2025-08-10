@@ -177,7 +177,6 @@ exports.addCaterer = async (req, res) => {
         }
       );
       profileImage = result.secure_url;
-      console.log("Profile image uploaded:", profileImage);
     }
 
     // Handle image uploads for each menuCategory
@@ -203,15 +202,11 @@ exports.addCaterer = async (req, res) => {
         );
         let categoryImage = category.categoryImage || "";
         if (file) {
-          console.log(`Uploading categoryImage[${index}]:`, file);
           const result = await cloudinary.uploader.upload(file.path, {
             folder: "BookMyMandap",
             resource_type: "image",
           });
           categoryImage = result.secure_url;
-          console.log(`Category image [${index}] uploaded:`, categoryImage);
-        } else {
-          console.log(`No file found for categoryImage[${index}]`);
         }
         return { ...category, categoryImage };
       })
@@ -244,8 +239,6 @@ exports.addCaterer = async (req, res) => {
 };
 
 exports.updateCaterer = async (req, res) => {
-  console.log("req.body:", req.body);
-  console.log("req.files:", JSON.stringify(req.files, null, 2));
   if (!req.provider) {
     return res
       .status(400)
@@ -438,7 +431,6 @@ exports.updateCaterer = async (req, res) => {
       if (caterer.profileImage) {
         const publicId = caterer.profileImage.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
-        console.log("Deleted old profile image:", caterer.profileImage);
       }
       const result = await cloudinary.uploader.upload(
         req.files["profileImage"][0].path,
@@ -448,7 +440,6 @@ exports.updateCaterer = async (req, res) => {
         }
       );
       profileImage = result.secure_url;
-      console.log("Profile image uploaded:", profileImage);
     }
 
     // Handle image updates for each menuCategory
@@ -477,37 +468,28 @@ exports.updateCaterer = async (req, res) => {
           caterer.menuCategory[index]?.categoryImage ||
           "";
         if (file) {
-          console.log(`Uploading categoryImage[${index}]:`, file);
           if (caterer.menuCategory[index]?.categoryImage) {
             const publicId = caterer.menuCategory[index].categoryImage
               .split("/")
               .pop()
               .split(".")[0];
             await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
-            console.log(
-              `Deleted old categoryImage[${index}]:`,
-              caterer.menuCategory[index].categoryImage
-            );
           }
           const result = await cloudinary.uploader.upload(file.path, {
             folder: "BookMyMandap",
             resource_type: "image",
           });
           categoryImage = result.secure_url;
-          console.log(`Category image [${index}] uploaded:`, categoryImage);
         } else if (
           !categoryImage &&
           caterer.menuCategory[index]?.categoryImage
         ) {
-          console.log(`Removing categoryImage[${index}]`);
           const publicId = caterer.menuCategory[index].categoryImage
             .split("/")
             .pop()
             .split(".")[0];
           await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
           categoryImage = "";
-        } else {
-          console.log(`No file found for categoryImage[${index}]`);
         }
         return { ...category, categoryImage };
       })
@@ -576,14 +558,12 @@ exports.deleteCaterer = async (req, res) => {
       if (category.categoryImage) {
         const publicId = category.categoryImage.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
-        console.log("Deleted category image:", category.categoryImage);
       }
     }
     // Delete profile image
     if (caterer.profileImage) {
       const publicId = caterer.profileImage.split("/").pop().split(".")[0];
       await cloudinary.uploader.destroy(`BookMyMandap/${publicId}`);
-      console.log("Deleted profile image:", caterer.profileImage);
     }
     await catererModel.findByIdAndUpdate(catererId, { isActive: false });
     return res
