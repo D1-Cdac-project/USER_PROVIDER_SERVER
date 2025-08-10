@@ -39,9 +39,10 @@ app.use(
       "http://127.0.0.1:5174",
       "http://127.0.0.1:5175",
       "http://127.0.0.1:5176",
-      "https://book-my-mandap-provider.vercel.app",
-      "https://admin-bookmymandap.vercel.app",
-      "https://bookmymandap.vercel.app"
+      "https://book-my-mandap-provider.vercel.app/",
+      "https://admin-bookmymandap.vercel.app/",
+      "https://bookmymandap.vercel.app/",
+      "https://bookmymandap-provider.vercel.app/"
     ],
     methods: ["GET", "PUT", "POST", "DELETE"],
     allowedHeaders: [
@@ -71,9 +72,10 @@ const io = socketIO(server, {
       "http://127.0.0.1:5174",
       "http://127.0.0.1:5175",
       "http://127.0.0.1:5176",
-        "https://book-my-mandap-provider.vercel.app",
-      "https://admin-bookmymandap.vercel.app",
-      "https://bookmymandap.vercel.app"
+         "https://book-my-mandap-provider.vercel.app/",
+      "https://admin-bookmymandap.vercel.app/",
+      "https://bookmymandap.vercel.app/",
+      "https://bookmymandap-provider.vercel.app/"
     ],
     methods: ["GET", "PUT", "POST", "DELETE"],
     allowedHeaders: [
