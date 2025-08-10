@@ -38,7 +38,7 @@ exports.addBooking = async (req, res) => {
       return res.status(401).json(createErrorResult("User not authenticated"));
     }
 
-    if (!mandapId || !orderDates || !totalAmount || !amountPaid) {
+    if (!mandapId || !orderDates || !totalAmount || !amountPaid || !paymentId) {
       return res
         .status(400)
         .json(createErrorResult("Required fields are missing"));
@@ -64,9 +64,13 @@ exports.addBooking = async (req, res) => {
       return res.status(404).json(createErrorResult("Mandap not found"));
     }
 
-    const dates = orderDates.map(
-      (date) => new Date(date).toISOString().split("T")[0]
-    );
+    const dates = orderDates.map((date) => {
+      const dateObj = new Date(date);
+      if (isNaN(dateObj.getTime())) {
+        throw new Error(`Invalid date format: ${date}`);
+      }
+      return dateObj.toISOString().split("T")[0];
+    });
     const availableDates = mandap.availableDates.map(
       (date) => new Date(date).toISOString().split("T")[0]
     );
@@ -155,15 +159,27 @@ exports.addBooking = async (req, res) => {
         .findById(mandapId)
         .select("providerId")
         .lean();
-      if (provider) {
-        const notification = await notificationModel.create({
-          userId: provider.providerId,
+      if (provider && provider.providerId) {
+        const notificationData = {
+          recipientId: provider.providerId,
+          recipientModel: "Providers",
+          type: "new_booking",
+          title: "New Booking",
           message: `New booking for your mandap on ${dates.join(", ")}`,
-          type: "Booking",
-        });
+          relatedId: booking._id,
+          relatedModel: "Bookings",
+          isRead: false,
+          createdAt: new Date(),
+        };
+        const notification = await notificationModel.create(notificationData);
         req.io
           .to(provider.providerId.toString())
           .emit("notification", notification);
+      } else {
+        console.warn(
+          "Provider not found or providerId missing for mandapId:",
+          mandapId
+        );
       }
     } else {
       console.warn("Socket.io not initialized");
@@ -277,14 +293,14 @@ exports.deleteBooking = async (req, res) => {
       .findById(booking.mandapId)
       .select("providerId")
       .lean();
-    if (provider) {
+    if (provider && provider.providerId) {
       const notificationData = {
         recipientId: provider.providerId,
         recipientModel: "Providers",
         type: "deleted_booking",
         title: "Booking Cancelled",
         message: `Booking ${id} for mandap ${booking.mandapId} has been cancelled.`,
-        relatedId: id,
+        relatedId: booking._id,
         relatedModel: "Bookings",
         isRead: false,
         createdAt: new Date(),
@@ -511,7 +527,7 @@ exports.updateBooking = async (req, res) => {
         type: "updated_booking",
         title: "Booking Updated",
         message: `Booking ${id} for mandap ${booking.mandapId} has been updated.`,
-        relatedId: id,
+        relatedId: booking._id,
         relatedModel: "Bookings",
         isRead: false,
         createdAt: new Date(),
