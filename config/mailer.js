@@ -13,14 +13,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-//  Verify transporter configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("NodeMailer configuration error:", error);
-  } else {
-    console.log("NodeMailer is ready to send emails");
-  }
-});
+
 // Send registration email to users or providers
 const sendRegistrationEmail = async (to, name, role) => {
   try {
@@ -42,9 +35,7 @@ const sendRegistrationEmail = async (to, name, role) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Registration email sent to ${to}`);
   } catch (error) {
-    console.error(`Error sending registration email to ${to}:`, error);
     throw new Error("Failed to send registration email");
   }
 };
@@ -66,7 +57,6 @@ const sendApprovalEmail = async (to, name) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Approval email sent to ${to}`);
   } catch (error) {
     console.error(`Error sending approval email to ${to}:`, error);
     throw new Error("Failed to send approval email");
@@ -89,7 +79,6 @@ const sendRejectionEmail = async (to, name) => {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Rejection email sent to ${to}`);
   } catch (error) {
     console.error(`Error sending rejection email to ${to}:`, error);
     throw new Error("Failed to send rejection email");

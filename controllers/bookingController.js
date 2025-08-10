@@ -21,19 +21,6 @@ exports.addBooking = async (req, res) => {
       paymentId,
     } = req.body;
     const userId = req.user?._id;
-
-    console.log("Received booking data:", {
-      mandapId,
-      orderDates,
-      photographer,
-      caterer,
-      room,
-      totalAmount,
-      amountPaid,
-      paymentId,
-      userId,
-    });
-
     if (!userId) {
       return res.status(401).json(createErrorResult("User not authenticated"));
     }
@@ -59,7 +46,6 @@ exports.addBooking = async (req, res) => {
     const mandap = await mandapModel
       .findOne({ _id: mandapId, isActive: true })
       .lean();
-    console.log("Mandap found:", !!mandap);
     if (!mandap) {
       return res.status(404).json(createErrorResult("Mandap not found"));
     }

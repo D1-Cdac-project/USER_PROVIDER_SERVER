@@ -240,13 +240,6 @@ exports.aboutUsEmailSender = async (req, res) => {
 
 exports.contactUsEmailSender = async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
-  console.log("Contact Us Email Data:", {
-    name,
-    email,
-    phone,
-    subject,
-    message,
-  });
 
   try {
     const transporter = nodemailer.createTransport({

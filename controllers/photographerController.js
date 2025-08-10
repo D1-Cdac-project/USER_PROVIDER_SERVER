@@ -179,7 +179,6 @@ exports.addPhotographer = async (req, res) => {
 
 // Updates a photographer with Cloudinary image handling
 exports.updatePhotographer = async (req, res) => {
-  console.log("req.files:", req.files); // Debug log
   if (!req.provider) {
     return res
       .status(400)
