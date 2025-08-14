@@ -80,7 +80,7 @@ cd server
 npm start
 ```
 
-Once the server is running, it will be at ports:
+Once the server is running, it will be present:
 
 ```
 http://localhost:4000/
