@@ -83,7 +83,7 @@ npm start
 Once the server is running, it will be accessible at:
 
 ```
-http://localhost:4000
+http://localhost:4000/
 ```
 
 ---
