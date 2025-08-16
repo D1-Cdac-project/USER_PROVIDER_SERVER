@@ -6,7 +6,7 @@ const generateToken = (res, statusCode, entity, role) => {
     const options = {
       expires: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "None",
       path: "/",
     };
