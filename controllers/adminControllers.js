@@ -55,6 +55,9 @@ exports.logoutAdmin = async (req, res) => {
     res.cookie("adminToken", null, {
       expires: new Date(Date.now()),
       httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      path: "/",
     });
     return res
       .status(200)

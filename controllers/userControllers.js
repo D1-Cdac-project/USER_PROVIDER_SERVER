@@ -88,6 +88,9 @@ exports.logoutUser = async (req, res) => {
     res.cookie("userToken", null, {
       expires: new Date(Date.now()),
       httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      path: "/",
     });
     return res
       .status(200)

@@ -113,6 +113,9 @@ exports.logoutProvider = async (req, res) => {
     res.cookie("providerToken", null, {
       expires: new Date(Date.now()),
       httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      path: "/",
     });
     return res
       .status(200)
@@ -223,6 +226,9 @@ exports.deleteProvider = async (req, res) => {
     res.cookie("providerToken", null, {
       expires: new Date(Date.now()),
       httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      path: "/",
     });
     return res.status(200).json(
       createSuccessResult({
