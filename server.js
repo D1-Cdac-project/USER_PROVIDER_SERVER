@@ -29,6 +29,10 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: [
+          "https://book-my-mandap-provider.vercel.app",
+      "https://admin-bookmymandap.vercel.app",
+      "https://bookmymandap.vercel.app",
+      "https://bookmymandap-provider.vercel.app",
       "http://localhost:5500",
       "http://localhost:3000",
       "http://localhost:5173",
@@ -38,7 +42,8 @@ app.use(
       "http://127.0.0.1:5173",
       "http://127.0.0.1:5174",
       "http://127.0.0.1:5175",
-      "http://127.0.0.1:5176",
+      "http://127.0.0.1:5176"
+  
     ],
     methods: ["GET", "PUT", "POST", "DELETE"],
     allowedHeaders: [
@@ -58,6 +63,10 @@ app.use(
 const io = socketIO(server, {
   cors: {
     origin: [
+          "https://book-my-mandap-provider.vercel.app",
+      "https://admin-bookmymandap.vercel.app",
+      "https://bookmymandap.vercel.app",
+      "https://bookmymandap-provider.vercel.app",
       "http://localhost:5500",
       "http://localhost:3000",
       "http://localhost:5173",
@@ -67,7 +76,8 @@ const io = socketIO(server, {
       "http://127.0.0.1:5173",
       "http://127.0.0.1:5174",
       "http://127.0.0.1:5175",
-      "http://127.0.0.1:5176",
+      "http://127.0.0.1:5176"
+         
     ],
     methods: ["GET", "PUT", "POST", "DELETE"],
     allowedHeaders: [
